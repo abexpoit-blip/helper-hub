@@ -36,11 +36,25 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
 
+      - name: Cache Bun dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.bun/install/cache
+          key: ${{ runner.os }}-bun-${{ hashFiles('**/bun.lockb', '**/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-bun-
+
       - name: Install frontend dependencies
         run: bun install
 
       - name: Install Tauri CLI
         run: bun add -d @tauri-apps/cli@^2
+
+      - name: Cache generated app icon
+        uses: actions/cache@v4
+        with:
+          path: app-icon.png
+          key: ${{ runner.os }}-app-icon-v1
 
       - name: Generate app icons
         shell: pwsh
@@ -86,6 +100,17 @@ jobs:
             if (-not (Test-Path $f)) { throw "Missing required icon after generation: $f" }
             Write-Host "[OK] $f"
           }
+
+      - name: Upload generated icons (for verification)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-icons
+          path: |
+            app-icon.png
+            src-tauri/icons/*.png
+            src-tauri/icons/*.ico
+            src-tauri/icons/*.icns
 
       - name: Build Tauri app (MSI + NSIS installer + portable)
         id: tauri_build
