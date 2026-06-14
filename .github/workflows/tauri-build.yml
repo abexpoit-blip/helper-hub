@@ -45,9 +45,10 @@ jobs:
       - name: Generate app icons
         shell: pwsh
         run: |
+          $ErrorActionPreference = 'Stop'
           $iconSource = "app-icon.png"
           if (-not (Test-Path $iconSource)) {
-            Write-Host "No app-icon.png found, generating local placeholder..."
+            Write-Host "No app-icon.png found — generating local placeholder..."
             Add-Type -AssemblyName System.Drawing
             $bitmap = New-Object System.Drawing.Bitmap 1024, 1024
             $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
@@ -64,12 +65,27 @@ jobs:
             $format.LineAlignment = [System.Drawing.StringAlignment]::Center
             $rectF = New-Object System.Drawing.RectangleF(0, 0, 1024, 1024)
             $graphics.DrawString("FB", $font, $brush, $rectF, $format)
-            $bitmap.Save("placeholder.png", [System.Drawing.Imaging.ImageFormat]::Png)
+            $bitmap.Save("app-icon.png", [System.Drawing.Imaging.ImageFormat]::Png)
             $graphics.Dispose()
             $bitmap.Dispose()
-            $iconSource = "placeholder.png"
           }
-          bunx tauri icon $iconSource
+          if (-not (Test-Path "app-icon.png")) {
+            throw "app-icon.png was not created — placeholder generation failed."
+          }
+          Write-Host "Running: bunx tauri icon app-icon.png"
+          bunx tauri icon app-icon.png
+          if ($LASTEXITCODE -ne 0) { throw "tauri icon failed with exit code $LASTEXITCODE" }
+          $required = @(
+            "src-tauri/icons/32x32.png",
+            "src-tauri/icons/128x128.png",
+            "src-tauri/icons/128x128@2x.png",
+            "src-tauri/icons/icon.icns",
+            "src-tauri/icons/icon.ico"
+          )
+          foreach ($f in $required) {
+            if (-not (Test-Path $f)) { throw "Missing required icon after generation: $f" }
+            Write-Host "[OK] $f"
+          }
 
       - name: Build Tauri app (MSI + NSIS installer + portable)
         id: tauri_build
