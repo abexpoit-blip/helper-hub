@@ -1,0 +1,50 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "FB Viral Traffic Engine Pro",
+  "version": "1.0.0",
+  "identifier": "com.fbviral.trafficengine",
+  "build": {
+    "frontendDist": "https://project--63ddf58a-6f5b-462b-95b6-c5340c9bcdf8.lovable.app"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "FB Viral Traffic Engine Pro",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1200,
+        "minHeight": 720,
+        "resizable": true,
+        "fullscreen": false,
+        "decorations": true,
+        "transparent": false,
+        "url": "https://project--63ddf58a-6f5b-462b-95b6-c5340c9bcdf8.lovable.app"
+      }
+    ],
+    "security": {
+      "csp": null,
+      "dangerousDisableAssetCspModification": true
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["msi", "nsis"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "windows": {
+      "nsis": {
+        "installerIcon": "icons/icon.ico",
+        "installMode": "perMachine",
+        "languages": ["English"]
+      }
+    },
+    "category": "Productivity",
+    "shortDescription": "Viral FB traffic automation desktop app",
+    "longDescription": "Premium glassmorphism desktop dashboard for Facebook viral traffic automation with iMax browser sync."
+  }
+}
