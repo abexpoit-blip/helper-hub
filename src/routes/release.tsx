@@ -62,17 +62,32 @@ function classifyAsset(name: string) {
 }
 
 function ReleasePage() {
-  const { data: releases, isLoading, error, refetch, isFetching } = useQuery<GhRelease[]>({
+  const { data: releases, isLoading, error, refetch, isFetching, dataUpdatedAt } = useQuery<GhRelease[]>({
     queryKey: ["gh-releases", GH_OWNER, GH_REPO],
     queryFn: async () => {
-      const res = await fetch(GH_API_LIST, { headers: { Accept: "application/vnd.github+json" } });
+      const res = await fetch(`${GH_API_LIST}&_=${Date.now()}`, {
+        headers: { Accept: "application/vnd.github+json" },
+        cache: "no-store",
+      });
       if (!res.ok) throw new Error(`GitHub API ${res.status}`);
       const json = (await res.json()) as GhRelease[];
       if (!Array.isArray(json) || json.length === 0) throw new Error("NO_RELEASE");
       return json;
     },
     retry: 1,
-    staleTime: 60_000,
+    staleTime: 15_000,
+    // Auto-poll until a release with Windows binaries shows up.
+    refetchInterval: (q) => {
+      const list = q.state.data as GhRelease[] | undefined;
+      const err = q.state.error as Error | null;
+      const hasWin = list?.some((r) => r.assets.some((a) => /\.(exe|msi)$/i.test(a.name)));
+      if (hasWin) return false; // build done — stop polling
+      // Poll faster when nothing yet / error, until workflow finishes
+      if (err || !list || list.length === 0) return 15_000;
+      return 20_000; // release exists but no .exe yet (build still running)
+    },
+    refetchIntervalInBackground: false,
+    refetchOnWindowFocus: true,
   });
 
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
