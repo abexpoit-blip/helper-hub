@@ -1027,18 +1027,29 @@ function SchedulerView() {
                   <div className="h-full bg-gradient-to-r from-emerald-400 via-sky-400 to-fuchsia-500"
                     style={{ width: `${Math.round(((c.total_done + c.total_failed) / Math.max(1, c.total_targets)) * 100)}%` }} />
                 </div>
-                <div className="mt-2 flex gap-1">
-                  {c.status === "draft" && (
-                    <button onClick={() => statusMut.mutate({ id: c.id, status: "running" })} className="rounded-lg bg-emerald-400/15 px-2 py-1 text-[10px] text-emerald-300 ring-1 ring-emerald-400/30">Run now</button>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {(c.status === "draft" || c.status === "scheduled") && (
+                    <button onClick={() => statusMut.mutate({ id: c.id, status: "running" })} className="rounded-lg bg-emerald-400/15 px-2 py-1 text-[10px] text-emerald-300 ring-1 ring-emerald-400/30">▶ Start</button>
                   )}
                   {c.status === "running" && (
-                    <button onClick={() => statusMut.mutate({ id: c.id, status: "paused" })} className="rounded-lg bg-amber-400/15 px-2 py-1 text-[10px] text-amber-300 ring-1 ring-amber-400/30">Pause</button>
+                    <button onClick={() => statusMut.mutate({ id: c.id, status: "paused" })} className="rounded-lg bg-amber-400/15 px-2 py-1 text-[10px] text-amber-300 ring-1 ring-amber-400/30">⏸ Pause</button>
                   )}
                   {c.status === "paused" && (
-                    <button onClick={() => statusMut.mutate({ id: c.id, status: "running" })} className="rounded-lg bg-emerald-400/15 px-2 py-1 text-[10px] text-emerald-300 ring-1 ring-emerald-400/30">Resume</button>
+                    <button onClick={() => statusMut.mutate({ id: c.id, status: "running" })} className="rounded-lg bg-emerald-400/15 px-2 py-1 text-[10px] text-emerald-300 ring-1 ring-emerald-400/30">▶ Resume</button>
                   )}
+                  {["draft","scheduled","running","paused"].includes(c.status) && (
+                    <button onClick={() => { if (confirm(`Cancel campaign "${c.name}"?`)) statusMut.mutate({ id: c.id, status: "cancelled" }); }}
+                      className="rounded-lg bg-rose-400/15 px-2 py-1 text-[10px] text-rose-300 ring-1 ring-rose-400/30">✕ Cancel</button>
+                  )}
+                  <span className="ml-auto text-[10px] text-muted-foreground">retries: {c.max_retries ?? 0}</span>
                 </div>
-                {openCampaign === c.id && <CampaignLogs campaignId={c.id} fetchLogs={fetchLogs} />}
+                {openCampaign === c.id && (
+                  <div className="mt-3 space-y-3">
+                    <RetryPolicyEditor campaign={c} />
+                    <CampaignRuns campaignId={c.id} />
+                    <CampaignLogs campaignId={c.id} fetchLogs={fetchLogs} />
+                  </div>
+                )}
               </div>
             ))}
           </div>
