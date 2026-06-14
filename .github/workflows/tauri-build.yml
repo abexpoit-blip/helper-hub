@@ -48,9 +48,27 @@ jobs:
           if (Test-Path "app-icon.png") {
             bunx tauri icon app-icon.png
           } else {
-            Write-Host "No app-icon.png found, generating placeholder..."
+            Write-Host "No app-icon.png found, generating local placeholder..."
             New-Item -ItemType Directory -Force -Path src-tauri/icons
-            Invoke-WebRequest -Uri "https://raw.githubusercontent.com/tauri-apps/tauri/dev/examples/api/src-tauri/icons/icon.png" -OutFile "placeholder.png"
+            Add-Type -AssemblyName System.Drawing
+            $bitmap = New-Object System.Drawing.Bitmap 1024, 1024
+            $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
+            $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+            $background = New-Object System.Drawing.Drawing2D.LinearGradientBrush \
+              ([System.Drawing.Rectangle]::new(0, 0, 1024, 1024)), \
+              ([System.Drawing.Color]::FromArgb(255, 217, 70, 239)), \
+              ([System.Drawing.Color]::FromArgb(255, 16, 185, 129)), \
+              45
+            $graphics.FillRectangle($background, 0, 0, 1024, 1024)
+            $font = New-Object System.Drawing.Font "Segoe UI", 260, ([System.Drawing.FontStyle]::Bold)
+            $brush = [System.Drawing.Brushes]::White
+            $format = New-Object System.Drawing.StringFormat
+            $format.Alignment = [System.Drawing.StringAlignment]::Center
+            $format.LineAlignment = [System.Drawing.StringAlignment]::Center
+            $graphics.DrawString("FB", $font, $brush, ([System.Drawing.RectangleF]::new(0, 0, 1024, 1024)), $format)
+            $bitmap.Save("placeholder.png", [System.Drawing.Imaging.ImageFormat]::Png)
+            $graphics.Dispose()
+            $bitmap.Dispose()
             bunx tauri icon placeholder.png
           }
 
