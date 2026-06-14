@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import {
   Download, Package, Shield, CheckCircle2, AlertTriangle, Loader2,
-  ExternalLink, Cpu, HardDrive, Zap, FileArchive, Github, History, ChevronDown,
+  ExternalLink, Cpu, HardDrive, Zap, FileArchive, Github, History, ChevronDown, Play,
 } from "lucide-react";
 
 const GH_OWNER = "abexpoit-blip";
