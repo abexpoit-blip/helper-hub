@@ -260,7 +260,7 @@ function ReleasePage() {
           <Req icon={Shield} title="Code-signed" desc="When configured in workflow" />
         </div>
 
-        <div className="text-center mt-8">
+        <div className="text-center mt-8 space-y-2">
           <button
             onClick={() => refetch()}
             disabled={isFetching}
@@ -269,7 +269,22 @@ function ReleasePage() {
             {isFetching && <Loader2 className="h-3 w-3 animate-spin" />}
             Refresh release info
           </button>
+          {(() => {
+            const hasWin = releases?.some((r) => r.assets.some((a) => /\.(exe|msi)$/i.test(a.name)));
+            if (hasWin) return null;
+            return (
+              <div className="text-[11px] text-muted-foreground/70 flex items-center justify-center gap-1.5">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400/60" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                </span>
+                Auto-refreshing every 15s — page will update as soon as the build finishes
+                {dataUpdatedAt ? ` · last check ${new Date(dataUpdatedAt).toLocaleTimeString()}` : ""}
+              </div>
+            );
+          })()}
         </div>
+
       </div>
     </div>
   );
