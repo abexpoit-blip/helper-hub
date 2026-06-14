@@ -42,35 +42,34 @@ jobs:
       - name: Install Tauri CLI
         run: bun add -d @tauri-apps/cli@^2
 
-      - name: Generate icons (if app-icon.png exists)
+      - name: Generate app icons
         shell: pwsh
         run: |
-          if (Test-Path "app-icon.png") {
-            bunx tauri icon app-icon.png
-          } else {
+          $iconSource = "app-icon.png"
+          if (-not (Test-Path $iconSource)) {
             Write-Host "No app-icon.png found, generating local placeholder..."
-            New-Item -ItemType Directory -Force -Path src-tauri/icons
             Add-Type -AssemblyName System.Drawing
             $bitmap = New-Object System.Drawing.Bitmap 1024, 1024
             $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
             $graphics.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
-            $background = New-Object System.Drawing.Drawing2D.LinearGradientBrush \
-              ([System.Drawing.Rectangle]::new(0, 0, 1024, 1024)), \
-              ([System.Drawing.Color]::FromArgb(255, 217, 70, 239)), \
-              ([System.Drawing.Color]::FromArgb(255, 16, 185, 129)), \
-              45
-            $graphics.FillRectangle($background, 0, 0, 1024, 1024)
-            $font = New-Object System.Drawing.Font "Segoe UI", 260, ([System.Drawing.FontStyle]::Bold)
+            $rect = New-Object System.Drawing.Rectangle 0, 0, 1024, 1024
+            $colorA = [System.Drawing.Color]::FromArgb(255, 217, 70, 239)
+            $colorB = [System.Drawing.Color]::FromArgb(255, 16, 185, 129)
+            $background = New-Object System.Drawing.Drawing2D.LinearGradientBrush($rect, $colorA, $colorB, 45)
+            $graphics.FillRectangle($background, $rect)
+            $font = New-Object System.Drawing.Font("Segoe UI", 260, [System.Drawing.FontStyle]::Bold)
             $brush = [System.Drawing.Brushes]::White
             $format = New-Object System.Drawing.StringFormat
             $format.Alignment = [System.Drawing.StringAlignment]::Center
             $format.LineAlignment = [System.Drawing.StringAlignment]::Center
-            $graphics.DrawString("FB", $font, $brush, ([System.Drawing.RectangleF]::new(0, 0, 1024, 1024)), $format)
+            $rectF = New-Object System.Drawing.RectangleF(0, 0, 1024, 1024)
+            $graphics.DrawString("FB", $font, $brush, $rectF, $format)
             $bitmap.Save("placeholder.png", [System.Drawing.Imaging.ImageFormat]::Png)
             $graphics.Dispose()
             $bitmap.Dispose()
-            bunx tauri icon placeholder.png
+            $iconSource = "placeholder.png"
           }
+          bunx tauri icon $iconSource
 
       - name: Build Tauri app (MSI + NSIS installer + portable)
         id: tauri_build
