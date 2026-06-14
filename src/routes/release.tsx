@@ -10,7 +10,7 @@ const GH_OWNER = "abexpoit-blip";
 const GH_REPO = "helper-hub";
 const GH_API_LIST = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/releases?per_page=30`;
 const GH_RELEASES = `https://github.com/${GH_OWNER}/${GH_REPO}/releases`;
-const GH_ACTIONS = `https://github.com/${GH_OWNER}/${GH_REPO}/actions`;
+const GH_ACTIONS = `https://github.com/${GH_OWNER}/${GH_REPO}/actions/workflows/tauri-build.yml`;
 
 type GhAsset = {
   name: string;
@@ -188,7 +188,7 @@ function ReleasePage() {
               <div>
                 <div className="font-semibold text-amber-200">Release found, but no Windows binaries attached</div>
                 <div className="text-sm text-muted-foreground mt-1">
-                  Latest release <span className="font-mono">{data.tag_name}</span> has no .exe / .msi assets. The Tauri workflow may still be running or failed.
+                  Latest release <span className="font-mono">{data.tag_name}</span> has no .exe / .msi assets. The Windows workflow may still be running or failed.
                 </div>
                 <a href={GH_ACTIONS} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 mt-3 text-sm text-sky-300 hover:text-sky-200">
                   Check GitHub Actions <ExternalLink className="h-3.5 w-3.5" />
@@ -319,7 +319,7 @@ function BuildStatusBanner({ state, errorMsg, release }: { state: "loading" | "e
         <AlertTriangle className="h-5 w-5 text-amber-300" />
         <div>
           <div className="font-medium text-amber-200">No release published yet</div>
-          <div className="text-xs text-muted-foreground">Push a tag like <code className="font-mono">v1.0.0</code> to trigger the Windows build.</div>
+          <div className="text-xs text-muted-foreground">Run the Windows workflow; the page will show download cards after it finishes.</div>
         </div>
       </div>
     );
