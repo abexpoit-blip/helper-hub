@@ -490,10 +490,18 @@ export type Database = {
         | "paused"
         | "completed"
         | "failed"
+        | "cancelled"
       campaign_type: "post" | "comment" | "reaction"
       log_level: "info" | "success" | "warning" | "error"
       metric_type: "post" | "video_rendered" | "click" | "success" | "fail"
-      run_status: "queued" | "running" | "success" | "failed" | "skipped"
+      run_status:
+        | "queued"
+        | "running"
+        | "success"
+        | "failed"
+        | "skipped"
+        | "paused"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -630,11 +638,20 @@ export const Constants = {
         "paused",
         "completed",
         "failed",
+        "cancelled",
       ],
       campaign_type: ["post", "comment", "reaction"],
       log_level: ["info", "success", "warning", "error"],
       metric_type: ["post", "video_rendered", "click", "success", "fail"],
-      run_status: ["queued", "running", "success", "failed", "skipped"],
+      run_status: [
+        "queued",
+        "running",
+        "success",
+        "failed",
+        "skipped",
+        "paused",
+        "cancelled",
+      ],
     },
   },
 } as const
