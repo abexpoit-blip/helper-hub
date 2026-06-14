@@ -1096,6 +1096,98 @@ function CampaignLogs({ campaignId, fetchLogs }: { campaignId: string; fetchLogs
   );
 }
 
+function RetryPolicyEditor({ campaign }: { campaign: any }) {
+  const qc = useQueryClient();
+  const setPolicy = useServerFn(setCampaignRetryPolicy);
+  const [maxR, setMaxR] = useState<number>(campaign.max_retries ?? 2);
+  const [backoff, setBackoff] = useState<number>(campaign.retry_backoff_seconds ?? 60);
+  const mut = useMutation({
+    mutationFn: () => setPolicy({ data: { id: campaign.id, max_retries: maxR, retry_backoff_seconds: backoff } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["campaigns"] }),
+  });
+  return (
+    <div className="glass rounded-xl p-3">
+      <div className="mb-2 text-[10px] uppercase tracking-widest text-muted-foreground">Retry Policy</div>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="text-[11px]">
+          <span className="block text-muted-foreground">Max retries</span>
+          <input type="number" min={0} max={10} value={maxR} onChange={(e) => setMaxR(parseInt(e.target.value) || 0)}
+            className="glass mt-1 w-20 rounded-lg bg-transparent px-2 py-1 text-xs outline-none" />
+        </label>
+        <label className="text-[11px]">
+          <span className="block text-muted-foreground">Backoff (s, exponential)</span>
+          <input type="number" min={5} max={3600} value={backoff} onChange={(e) => setBackoff(parseInt(e.target.value) || 60)}
+            className="glass mt-1 w-24 rounded-lg bg-transparent px-2 py-1 text-xs outline-none" />
+        </label>
+        <button onClick={() => mut.mutate()} disabled={mut.isPending}
+          className="rounded-lg bg-fuchsia-400/15 px-3 py-1.5 text-[11px] text-fuchsia-200 ring-1 ring-fuchsia-400/30">
+          {mut.isPending ? "Saving…" : "Apply"}
+        </button>
+        {mut.isSuccess && <span className="text-[10px] text-emerald-300">Saved ✓</span>}
+      </div>
+    </div>
+  );
+}
+
+function CampaignRuns({ campaignId }: { campaignId: string }) {
+  const qc = useQueryClient();
+  const fetchRuns = useServerFn(listRuns);
+  const doControl = useServerFn(controlRun);
+  const { data } = useQuery({
+    queryKey: ["runs", campaignId],
+    queryFn: () => fetchRuns({ data: { campaignId } }),
+    refetchInterval: 3000,
+  });
+  const runs = data?.runs ?? [];
+  const ctrl = useMutation({
+    mutationFn: (v: { runId: string; action: "pause" | "resume" | "cancel" | "retry" }) =>
+      doControl({ data: v }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["runs", campaignId] }),
+  });
+  const tone: Record<string, string> = {
+    queued: "text-sky-300", running: "text-emerald-300 animate-pulse", paused: "text-amber-300",
+    success: "text-emerald-300", failed: "text-rose-300", cancelled: "text-muted-foreground", skipped: "text-muted-foreground",
+  };
+  return (
+    <div className="glass rounded-xl p-3">
+      <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-widest text-muted-foreground">
+        <span>Per-account Runs ({runs.length})</span>
+      </div>
+      <div className="max-h-56 space-y-1 overflow-auto">
+        {runs.map((r: any) => (
+          <div key={r.id} className="flex items-center gap-2 rounded-lg bg-black/20 px-2 py-1.5 text-[11px]">
+            <span className="w-32 truncate">{r.fb_accounts?.label ?? r.account_id?.slice(0, 8)}</span>
+            <span className={`w-16 font-mono ${tone[r.status] ?? "text-muted-foreground"}`}>{r.status}</span>
+            <span className="w-20 text-muted-foreground">
+              {r.retry_count ?? 0}/{r.max_retries ?? 0}
+            </span>
+            <span className="flex-1 truncate text-muted-foreground">{r.error ?? ""}</span>
+            <div className="flex gap-1">
+              {(r.status === "queued" || r.status === "running") && (
+                <button onClick={() => ctrl.mutate({ runId: r.id, action: "pause" })}
+                  className="rounded bg-amber-400/15 px-1.5 py-0.5 text-[9px] text-amber-300">⏸</button>
+              )}
+              {r.status === "paused" && (
+                <button onClick={() => ctrl.mutate({ runId: r.id, action: "resume" })}
+                  className="rounded bg-emerald-400/15 px-1.5 py-0.5 text-[9px] text-emerald-300">▶</button>
+              )}
+              {(r.status === "failed" || r.status === "cancelled") && (
+                <button onClick={() => ctrl.mutate({ runId: r.id, action: "retry" })}
+                  className="rounded bg-sky-400/15 px-1.5 py-0.5 text-[9px] text-sky-300">↻</button>
+              )}
+              {!["success","cancelled"].includes(r.status) && (
+                <button onClick={() => ctrl.mutate({ runId: r.id, action: "cancel" })}
+                  className="rounded bg-rose-400/15 px-1.5 py-0.5 text-[9px] text-rose-300">✕</button>
+              )}
+            </div>
+          </div>
+        ))}
+        {runs.length === 0 && <div className="text-[11px] text-muted-foreground">No runs.</div>}
+      </div>
+    </div>
+  );
+}
+
 /* ============================== SHARED ============================== */
 function Section({ title, subtitle, icon: Icon }: { title: string; subtitle: string; icon: typeof Wand2 }) {
   return (
