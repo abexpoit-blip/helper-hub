@@ -1073,6 +1073,7 @@ function CampaignStatusBadge({ status }: { status: string }) {
     paused: "bg-amber-400/15 text-amber-300 ring-amber-400/30",
     completed: "bg-fuchsia-400/15 text-fuchsia-300 ring-fuchsia-400/30",
     failed: "bg-rose-400/15 text-rose-300 ring-rose-400/30",
+    cancelled: "bg-rose-400/10 text-rose-300/80 ring-rose-400/20",
   };
   return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${map[status] ?? map.draft}`}>{status}</span>;
 }
