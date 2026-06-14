@@ -168,21 +168,30 @@ async function updateCampaignCounters(supabase: SupaAdmin, campaignId: string) {
 async function maybeCompleteRunningCampaigns(supabase: SupaAdmin) {
   const { data: running } = await supabase
     .from("campaigns")
-    .select("id,user_id,name,total_targets,total_done,total_failed")
+    .select("id,user_id,name")
     .eq("status", "running")
     .limit(100);
   for (const c of running ?? []) {
-    if ((c.total_done + c.total_failed) >= c.total_targets) {
-      await supabase
-        .from("campaigns")
-        .update({ status: "completed", completed_at: new Date().toISOString() })
-        .eq("id", c.id);
-      await supabase.from("run_logs").insert({
-        campaign_id: c.id,
-        user_id: c.user_id,
-        level: "success",
-        message: `Campaign "${c.name}" completed (${c.total_done} ok / ${c.total_failed} failed).`,
-      });
-    }
+    const { data: rows } = await supabase
+      .from("campaign_runs")
+      .select("status")
+      .eq("campaign_id", c.id);
+    if (!rows || rows.length === 0) continue;
+    const pending = rows.filter((r) =>
+      r.status === "queued" || r.status === "running" || r.status === "paused"
+    ).length;
+    if (pending > 0) continue;
+    const done = rows.filter((r) => r.status === "success").length;
+    const failed = rows.filter((r) => r.status === "failed").length;
+    await supabase
+      .from("campaigns")
+      .update({ status: "completed", completed_at: new Date().toISOString() })
+      .eq("id", c.id);
+    await supabase.from("run_logs").insert({
+      campaign_id: c.id,
+      user_id: c.user_id,
+      level: "success",
+      message: `Campaign "${c.name}" completed (${done} ok / ${failed} failed).`,
+    });
   }
 }
