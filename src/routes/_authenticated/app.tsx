@@ -651,6 +651,7 @@ function IMaxView() {
   const [maxConc, setMaxConc] = useState(24);
   const [fp, setFp] = useState({ canvas: true, webgl: true, audio: false, timezone: true, user_agent: true });
   const [test, setTest] = useState<{ ok: boolean; message: string; busy?: boolean } | null>(null);
+  const [diag, setDiag] = useState<DiagStep[]>([]);
 
   useEffect(() => {
     if (cfg) {
@@ -677,8 +678,10 @@ function IMaxView() {
   });
 
   async function runTest() {
-    setTest({ ok: false, message: "Testing…", busy: true });
-    const r = await testImaxConnection(endpoint, token || undefined);
+    setTest({ ok: false, message: "Running diagnostics…", busy: true });
+    setDiag([]);
+    const r = await testImaxConnection(endpoint, token || undefined, (steps) => setDiag(steps));
+    setDiag(r.steps);
     setTest({ ok: r.ok, message: r.message + (r.latencyMs ? ` (${r.latencyMs}ms)` : "") });
     await recordTest({ data: { ok: r.ok, message: r.message } }).catch(() => {});
   }
