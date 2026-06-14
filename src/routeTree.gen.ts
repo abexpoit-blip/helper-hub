@@ -9,12 +9,18 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as ReleaseRouteImport } from './routes/release'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedAppRouteImport } from './routes/_authenticated/app'
 import { Route as ApiPublicHooksSchedulerTickRouteImport } from './routes/api/public/hooks/scheduler-tick'
 
+const ReleaseRoute = ReleaseRouteImport.update({
+  id: '/release',
+  path: '/release',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -44,12 +50,14 @@ const ApiPublicHooksSchedulerTickRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/release': typeof ReleaseRoute
   '/app': typeof AuthenticatedAppRoute
   '/api/public/hooks/scheduler-tick': typeof ApiPublicHooksSchedulerTickRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/release': typeof ReleaseRoute
   '/app': typeof AuthenticatedAppRoute
   '/api/public/hooks/scheduler-tick': typeof ApiPublicHooksSchedulerTickRoute
 }
@@ -58,19 +66,26 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/release': typeof ReleaseRoute
   '/_authenticated/app': typeof AuthenticatedAppRoute
   '/api/public/hooks/scheduler-tick': typeof ApiPublicHooksSchedulerTickRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/app' | '/api/public/hooks/scheduler-tick'
+  fullPaths:
+    | '/'
+    | '/auth'
+    | '/release'
+    | '/app'
+    | '/api/public/hooks/scheduler-tick'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/app' | '/api/public/hooks/scheduler-tick'
+  to: '/' | '/auth' | '/release' | '/app' | '/api/public/hooks/scheduler-tick'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/release'
     | '/_authenticated/app'
     | '/api/public/hooks/scheduler-tick'
   fileRoutesById: FileRoutesById
@@ -79,11 +94,19 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  ReleaseRoute: typeof ReleaseRoute
   ApiPublicHooksSchedulerTickRoute: typeof ApiPublicHooksSchedulerTickRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/release': {
+      id: '/release'
+      path: '/release'
+      fullPath: '/release'
+      preLoaderRoute: typeof ReleaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -137,6 +160,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  ReleaseRoute: ReleaseRoute,
   ApiPublicHooksSchedulerTickRoute: ApiPublicHooksSchedulerTickRoute,
 }
 export const routeTree = rootRouteImport
