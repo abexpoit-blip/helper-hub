@@ -12,9 +12,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { listAccounts, importAccounts, updateAccountStatus, deleteAccount, mapImaxProfile, attachProxy } from "@/lib/accounts.functions";
 import { listProxies, addProxy, deleteProxy } from "@/lib/proxies.functions";
 import { getImaxConfig, saveImaxConfig, recordImaxTest } from "@/lib/imax.functions";
-import { createCampaign, listCampaigns, listLogs, updateCampaignStatus } from "@/lib/campaigns.functions";
+import { createCampaign, listCampaigns, listLogs, listRuns, updateCampaignStatus, setCampaignRetryPolicy, controlRun } from "@/lib/campaigns.functions";
 import { getDashboardStats } from "@/lib/metrics.functions";
-import { testImaxConnection, listImaxProfiles } from "@/lib/imax-client";
+import { testImaxConnection, listImaxProfiles, type DiagStep } from "@/lib/imax-client";
 
 export const Route = createFileRoute("/_authenticated/app")({
   head: () => ({ meta: [{ title: "Dashboard · FB Viral Traffic Engine Pro" }] }),
@@ -651,6 +651,7 @@ function IMaxView() {
   const [maxConc, setMaxConc] = useState(24);
   const [fp, setFp] = useState({ canvas: true, webgl: true, audio: false, timezone: true, user_agent: true });
   const [test, setTest] = useState<{ ok: boolean; message: string; busy?: boolean } | null>(null);
+  const [diag, setDiag] = useState<DiagStep[]>([]);
 
   useEffect(() => {
     if (cfg) {
@@ -677,8 +678,10 @@ function IMaxView() {
   });
 
   async function runTest() {
-    setTest({ ok: false, message: "Testing…", busy: true });
-    const r = await testImaxConnection(endpoint, token || undefined);
+    setTest({ ok: false, message: "Running diagnostics…", busy: true });
+    setDiag([]);
+    const r = await testImaxConnection(endpoint, token || undefined, (steps) => setDiag(steps));
+    setDiag(r.steps);
     setTest({ ok: r.ok, message: r.message + (r.latencyMs ? ` (${r.latencyMs}ms)` : "") });
     await recordTest({ data: { ok: r.ok, message: r.message } }).catch(() => {});
   }
@@ -719,9 +722,41 @@ function IMaxView() {
             Auto-map Profiles
           </button>
         </div>
-        {test && !test.busy && (
-          <div className={`flex items-center gap-2 rounded-xl px-4 py-3 text-sm ring-1 ${test.ok ? "bg-emerald-400/10 text-emerald-300 ring-emerald-400/30" : "bg-rose-400/10 text-rose-300 ring-rose-400/30"}`}>
-            {test.ok ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />} {test.message}
+        {test && (
+          <div className={`flex items-center gap-2 rounded-xl px-4 py-3 text-sm ring-1 ${test.busy ? "bg-sky-400/10 text-sky-300 ring-sky-400/30" : test.ok ? "bg-emerald-400/10 text-emerald-300 ring-emerald-400/30" : "bg-rose-400/10 text-rose-300 ring-rose-400/30"}`}>
+            {test.busy ? <Loader2 className="h-4 w-4 animate-spin" /> : test.ok ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />} {test.message}
+          </div>
+        )}
+        {diag.length > 0 && (
+          <div className="glass rounded-2xl p-3 space-y-1.5">
+            <div className="mb-1 text-[10px] uppercase tracking-widest text-muted-foreground">Diagnostic Log</div>
+            {diag.map((s) => {
+              const tone =
+                s.status === "ok" ? "text-emerald-300" :
+                s.status === "fail" ? "text-rose-300" :
+                s.status === "warn" ? "text-amber-300" :
+                s.status === "running" ? "text-sky-300" : "text-muted-foreground";
+              const icon =
+                s.status === "ok" ? "✓" :
+                s.status === "fail" ? "✕" :
+                s.status === "warn" ? "!" :
+                s.status === "running" ? "…" : "·";
+              return (
+                <div key={s.id} className="rounded-lg bg-black/20 px-3 py-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <div className={`flex items-center gap-2 ${tone}`}>
+                      <span className="inline-grid h-4 w-4 place-items-center rounded-full bg-white/10 font-mono">{icon}</span>
+                      <span className="font-medium">{s.label}</span>
+                    </div>
+                    {s.ms != null && <span className="font-mono text-[10px] text-muted-foreground">{s.ms}ms</span>}
+                  </div>
+                  {s.detail && <div className="mt-1 ml-6 text-[11px] text-muted-foreground">{s.detail}</div>}
+                  {s.hint && (s.status === "fail" || s.status === "warn") && (
+                    <div className="mt-1 ml-6 text-[11px] text-amber-200/90">💡 {s.hint}</div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 
@@ -893,6 +928,8 @@ function SchedulerView() {
   const [pph, setPph] = useState(30);
   const [rand, setRand] = useState(90);
   const [scheduleAt, setScheduleAt] = useState("");
+  const [maxRetries, setMaxRetries] = useState(2);
+  const [backoff, setBackoff] = useState(60);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openCampaign, setOpenCampaign] = useState<string | null>(null);
 
@@ -905,6 +942,8 @@ function SchedulerView() {
         link: link || undefined,
         posts_per_hour: pph,
         randomize_seconds: rand,
+        max_retries: maxRetries,
+        retry_backoff_seconds: backoff,
         scheduled_at: scheduleAt ? new Date(scheduleAt).toISOString() : undefined,
         account_ids: Array.from(selected),
       },
@@ -939,6 +978,8 @@ function SchedulerView() {
             <Field label="Randomize (±sec)" placeholder="90" value={String(rand)} onChange={(v) => setRand(parseInt(v) || 0)} />
             <Field label="Schedule At (optional)" placeholder="" type="datetime-local" value={scheduleAt} onChange={setScheduleAt} />
             <Field label="Link / Target URL" placeholder="https://…" value={link} onChange={setLink} />
+            <Field label="Max Retries (per run)" placeholder="2" value={String(maxRetries)} onChange={(v) => setMaxRetries(Math.max(0, Math.min(10, parseInt(v) || 0)))} />
+            <Field label="Retry Backoff (sec, exponential)" placeholder="60" value={String(backoff)} onChange={(v) => setBackoff(Math.max(5, parseInt(v) || 60))} />
           </div>
           <label className="block">
             <span className="mb-1.5 block text-[11px] uppercase tracking-widest text-muted-foreground">Spintax Body</span>
@@ -992,18 +1033,29 @@ function SchedulerView() {
                   <div className="h-full bg-gradient-to-r from-emerald-400 via-sky-400 to-fuchsia-500"
                     style={{ width: `${Math.round(((c.total_done + c.total_failed) / Math.max(1, c.total_targets)) * 100)}%` }} />
                 </div>
-                <div className="mt-2 flex gap-1">
-                  {c.status === "draft" && (
-                    <button onClick={() => statusMut.mutate({ id: c.id, status: "running" })} className="rounded-lg bg-emerald-400/15 px-2 py-1 text-[10px] text-emerald-300 ring-1 ring-emerald-400/30">Run now</button>
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {(c.status === "draft" || c.status === "scheduled") && (
+                    <button onClick={() => statusMut.mutate({ id: c.id, status: "running" })} className="rounded-lg bg-emerald-400/15 px-2 py-1 text-[10px] text-emerald-300 ring-1 ring-emerald-400/30">▶ Start</button>
                   )}
                   {c.status === "running" && (
-                    <button onClick={() => statusMut.mutate({ id: c.id, status: "paused" })} className="rounded-lg bg-amber-400/15 px-2 py-1 text-[10px] text-amber-300 ring-1 ring-amber-400/30">Pause</button>
+                    <button onClick={() => statusMut.mutate({ id: c.id, status: "paused" })} className="rounded-lg bg-amber-400/15 px-2 py-1 text-[10px] text-amber-300 ring-1 ring-amber-400/30">⏸ Pause</button>
                   )}
                   {c.status === "paused" && (
-                    <button onClick={() => statusMut.mutate({ id: c.id, status: "running" })} className="rounded-lg bg-emerald-400/15 px-2 py-1 text-[10px] text-emerald-300 ring-1 ring-emerald-400/30">Resume</button>
+                    <button onClick={() => statusMut.mutate({ id: c.id, status: "running" })} className="rounded-lg bg-emerald-400/15 px-2 py-1 text-[10px] text-emerald-300 ring-1 ring-emerald-400/30">▶ Resume</button>
                   )}
+                  {["draft","scheduled","running","paused"].includes(c.status) && (
+                    <button onClick={() => { if (confirm(`Cancel campaign "${c.name}"?`)) statusMut.mutate({ id: c.id, status: "cancelled" }); }}
+                      className="rounded-lg bg-rose-400/15 px-2 py-1 text-[10px] text-rose-300 ring-1 ring-rose-400/30">✕ Cancel</button>
+                  )}
+                  <span className="ml-auto text-[10px] text-muted-foreground">retries: {c.max_retries ?? 0}</span>
                 </div>
-                {openCampaign === c.id && <CampaignLogs campaignId={c.id} fetchLogs={fetchLogs} />}
+                {openCampaign === c.id && (
+                  <div className="mt-3 space-y-3">
+                    <RetryPolicyEditor campaign={c} />
+                    <CampaignRuns campaignId={c.id} />
+                    <CampaignLogs campaignId={c.id} fetchLogs={fetchLogs} />
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -1021,6 +1073,7 @@ function CampaignStatusBadge({ status }: { status: string }) {
     paused: "bg-amber-400/15 text-amber-300 ring-amber-400/30",
     completed: "bg-fuchsia-400/15 text-fuchsia-300 ring-fuchsia-400/30",
     failed: "bg-rose-400/15 text-rose-300 ring-rose-400/30",
+    cancelled: "bg-rose-400/10 text-rose-300/80 ring-rose-400/20",
   };
   return <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ring-1 ${map[status] ?? map.draft}`}>{status}</span>;
 }
@@ -1046,6 +1099,98 @@ function CampaignLogs({ campaignId, fetchLogs }: { campaignId: string; fetchLogs
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function RetryPolicyEditor({ campaign }: { campaign: any }) {
+  const qc = useQueryClient();
+  const setPolicy = useServerFn(setCampaignRetryPolicy);
+  const [maxR, setMaxR] = useState<number>(campaign.max_retries ?? 2);
+  const [backoff, setBackoff] = useState<number>(campaign.retry_backoff_seconds ?? 60);
+  const mut = useMutation({
+    mutationFn: () => setPolicy({ data: { id: campaign.id, max_retries: maxR, retry_backoff_seconds: backoff } }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["campaigns"] }),
+  });
+  return (
+    <div className="glass rounded-xl p-3">
+      <div className="mb-2 text-[10px] uppercase tracking-widest text-muted-foreground">Retry Policy</div>
+      <div className="flex flex-wrap items-end gap-2">
+        <label className="text-[11px]">
+          <span className="block text-muted-foreground">Max retries</span>
+          <input type="number" min={0} max={10} value={maxR} onChange={(e) => setMaxR(parseInt(e.target.value) || 0)}
+            className="glass mt-1 w-20 rounded-lg bg-transparent px-2 py-1 text-xs outline-none" />
+        </label>
+        <label className="text-[11px]">
+          <span className="block text-muted-foreground">Backoff (s, exponential)</span>
+          <input type="number" min={5} max={3600} value={backoff} onChange={(e) => setBackoff(parseInt(e.target.value) || 60)}
+            className="glass mt-1 w-24 rounded-lg bg-transparent px-2 py-1 text-xs outline-none" />
+        </label>
+        <button onClick={() => mut.mutate()} disabled={mut.isPending}
+          className="rounded-lg bg-fuchsia-400/15 px-3 py-1.5 text-[11px] text-fuchsia-200 ring-1 ring-fuchsia-400/30">
+          {mut.isPending ? "Saving…" : "Apply"}
+        </button>
+        {mut.isSuccess && <span className="text-[10px] text-emerald-300">Saved ✓</span>}
+      </div>
+    </div>
+  );
+}
+
+function CampaignRuns({ campaignId }: { campaignId: string }) {
+  const qc = useQueryClient();
+  const fetchRuns = useServerFn(listRuns);
+  const doControl = useServerFn(controlRun);
+  const { data } = useQuery({
+    queryKey: ["runs", campaignId],
+    queryFn: () => fetchRuns({ data: { campaignId } }),
+    refetchInterval: 3000,
+  });
+  const runs = data?.runs ?? [];
+  const ctrl = useMutation({
+    mutationFn: (v: { runId: string; action: "pause" | "resume" | "cancel" | "retry" }) =>
+      doControl({ data: v }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["runs", campaignId] }),
+  });
+  const tone: Record<string, string> = {
+    queued: "text-sky-300", running: "text-emerald-300 animate-pulse", paused: "text-amber-300",
+    success: "text-emerald-300", failed: "text-rose-300", cancelled: "text-muted-foreground", skipped: "text-muted-foreground",
+  };
+  return (
+    <div className="glass rounded-xl p-3">
+      <div className="mb-2 flex items-center justify-between text-[10px] uppercase tracking-widest text-muted-foreground">
+        <span>Per-account Runs ({runs.length})</span>
+      </div>
+      <div className="max-h-56 space-y-1 overflow-auto">
+        {runs.map((r: any) => (
+          <div key={r.id} className="flex items-center gap-2 rounded-lg bg-black/20 px-2 py-1.5 text-[11px]">
+            <span className="w-32 truncate">{r.fb_accounts?.label ?? r.account_id?.slice(0, 8)}</span>
+            <span className={`w-16 font-mono ${tone[r.status] ?? "text-muted-foreground"}`}>{r.status}</span>
+            <span className="w-20 text-muted-foreground">
+              {r.retry_count ?? 0}/{r.max_retries ?? 0}
+            </span>
+            <span className="flex-1 truncate text-muted-foreground">{r.error ?? ""}</span>
+            <div className="flex gap-1">
+              {(r.status === "queued" || r.status === "running") && (
+                <button onClick={() => ctrl.mutate({ runId: r.id, action: "pause" })}
+                  className="rounded bg-amber-400/15 px-1.5 py-0.5 text-[9px] text-amber-300">⏸</button>
+              )}
+              {r.status === "paused" && (
+                <button onClick={() => ctrl.mutate({ runId: r.id, action: "resume" })}
+                  className="rounded bg-emerald-400/15 px-1.5 py-0.5 text-[9px] text-emerald-300">▶</button>
+              )}
+              {(r.status === "failed" || r.status === "cancelled") && (
+                <button onClick={() => ctrl.mutate({ runId: r.id, action: "retry" })}
+                  className="rounded bg-sky-400/15 px-1.5 py-0.5 text-[9px] text-sky-300">↻</button>
+              )}
+              {!["success","cancelled"].includes(r.status) && (
+                <button onClick={() => ctrl.mutate({ runId: r.id, action: "cancel" })}
+                  className="rounded bg-rose-400/15 px-1.5 py-0.5 text-[9px] text-rose-300">✕</button>
+              )}
+            </div>
+          </div>
+        ))}
+        {runs.length === 0 && <div className="text-[11px] text-muted-foreground">No runs.</div>}
+      </div>
     </div>
   );
 }

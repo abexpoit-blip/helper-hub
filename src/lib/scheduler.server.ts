@@ -41,12 +41,14 @@ export async function runSchedulerTick() {
     summary.startedCampaigns++;
   }
 
-  // 2) process queued runs for any running campaign
+  // 2) process queued runs for any running campaign whose next_retry_at is due
+  const nowIso = new Date().toISOString();
   const { data: queued } = await supabase
     .from("campaign_runs")
-    .select("id,campaign_id,user_id,account_id,campaigns!inner(name,type,payload,status)")
+    .select("id,campaign_id,user_id,account_id,retry_count,max_retries,next_retry_at,campaigns!inner(name,type,payload,status,retry_backoff_seconds)")
     .eq("status", "queued")
     .eq("campaigns.status", "running")
+    .or(`next_retry_at.is.null,next_retry_at.lte.${nowIso}`)
     .limit(BATCH_PER_TICK);
 
   for (const run of queued ?? []) {
@@ -54,6 +56,7 @@ export async function runSchedulerTick() {
       name: string;
       type: "post" | "comment" | "reaction";
       payload: { spintax?: string; link?: string; target_url?: string };
+      retry_backoff_seconds: number;
     };
     const startedAt = new Date().toISOString();
     await supabase
@@ -62,32 +65,53 @@ export async function runSchedulerTick() {
       .eq("id", run.id);
 
     // Simulate outcome (real delivery is desktop-client driven).
-    // 92% success baseline so the dashboard shows realistic metrics.
     const success = Math.random() > 0.08;
     const renderedText = c.payload?.spintax ? spin(c.payload.spintax) : null;
-
     const completedAt = new Date().toISOString();
-    await supabase
-      .from("campaign_runs")
-      .update({
-        status: success ? "success" : "failed",
-        completed_at: completedAt,
-        error: success ? null : "Account temporarily rate-limited",
-        result: success
-          ? { rendered: renderedText, link: c.payload?.link ?? c.payload?.target_url ?? null }
-          : null,
-      })
-      .eq("id", run.id);
+
+    const retryCount = (run as any).retry_count ?? 0;
+    const maxRetries = (run as any).max_retries ?? 0;
+    const willRetry = !success && retryCount < maxRetries;
+
+    if (willRetry) {
+      const backoff = c.retry_backoff_seconds ?? 60;
+      const nextAt = new Date(Date.now() + backoff * 1000 * Math.pow(2, retryCount)).toISOString();
+      await supabase
+        .from("campaign_runs")
+        .update({
+          status: "queued",
+          started_at: null,
+          completed_at: null,
+          retry_count: retryCount + 1,
+          next_retry_at: nextAt,
+          error: "Retry scheduled — previous attempt failed",
+        })
+        .eq("id", run.id);
+    } else {
+      await supabase
+        .from("campaign_runs")
+        .update({
+          status: success ? "success" : "failed",
+          completed_at: completedAt,
+          error: success ? null : "Account temporarily rate-limited",
+          result: success
+            ? { rendered: renderedText, link: c.payload?.link ?? c.payload?.target_url ?? null }
+            : null,
+        })
+        .eq("id", run.id);
+    }
 
     await supabase.from("run_logs").insert({
       run_id: run.id,
       campaign_id: run.campaign_id,
       user_id: run.user_id,
       account_id: run.account_id,
-      level: success ? "success" : "error",
+      level: success ? "success" : willRetry ? "warning" : "error",
       message: success
         ? `${c.type.toUpperCase()} dispatched: ${(renderedText ?? "").slice(0, 80) || "(no body)"}`
-        : `Run failed: rate-limited or session invalid`,
+        : willRetry
+          ? `Attempt ${retryCount + 1}/${maxRetries} failed — retrying with backoff`
+          : `Run failed (no retries left): rate-limited or session invalid`,
     });
 
     // Emit metrics
@@ -144,21 +168,30 @@ async function updateCampaignCounters(supabase: SupaAdmin, campaignId: string) {
 async function maybeCompleteRunningCampaigns(supabase: SupaAdmin) {
   const { data: running } = await supabase
     .from("campaigns")
-    .select("id,user_id,name,total_targets,total_done,total_failed")
+    .select("id,user_id,name")
     .eq("status", "running")
     .limit(100);
   for (const c of running ?? []) {
-    if ((c.total_done + c.total_failed) >= c.total_targets) {
-      await supabase
-        .from("campaigns")
-        .update({ status: "completed", completed_at: new Date().toISOString() })
-        .eq("id", c.id);
-      await supabase.from("run_logs").insert({
-        campaign_id: c.id,
-        user_id: c.user_id,
-        level: "success",
-        message: `Campaign "${c.name}" completed (${c.total_done} ok / ${c.total_failed} failed).`,
-      });
-    }
+    const { data: rows } = await supabase
+      .from("campaign_runs")
+      .select("status")
+      .eq("campaign_id", c.id);
+    if (!rows || rows.length === 0) continue;
+    const pending = rows.filter((r) =>
+      r.status === "queued" || r.status === "running" || r.status === "paused"
+    ).length;
+    if (pending > 0) continue;
+    const done = rows.filter((r) => r.status === "success").length;
+    const failed = rows.filter((r) => r.status === "failed").length;
+    await supabase
+      .from("campaigns")
+      .update({ status: "completed", completed_at: new Date().toISOString() })
+      .eq("id", c.id);
+    await supabase.from("run_logs").insert({
+      campaign_id: c.id,
+      user_id: c.user_id,
+      level: "success",
+      message: `Campaign "${c.name}" completed (${done} ok / ${failed} failed).`,
+    });
   }
 }

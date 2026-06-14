@@ -22,7 +22,10 @@ export type Database = {
           created_at: string
           error: string | null
           id: string
+          max_retries: number
+          next_retry_at: string | null
           result: Json | null
+          retry_count: number
           started_at: string | null
           status: Database["public"]["Enums"]["run_status"]
           user_id: string
@@ -34,7 +37,10 @@ export type Database = {
           created_at?: string
           error?: string | null
           id?: string
+          max_retries?: number
+          next_retry_at?: string | null
           result?: Json | null
+          retry_count?: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["run_status"]
           user_id: string
@@ -46,7 +52,10 @@ export type Database = {
           created_at?: string
           error?: string | null
           id?: string
+          max_retries?: number
+          next_retry_at?: string | null
           result?: Json | null
+          retry_count?: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["run_status"]
           user_id?: string
@@ -73,10 +82,12 @@ export type Database = {
           completed_at: string | null
           created_at: string
           id: string
+          max_retries: number
           name: string
           payload: Json
           posts_per_hour: number
           randomize_seconds: number
+          retry_backoff_seconds: number
           scheduled_at: string | null
           started_at: string | null
           status: Database["public"]["Enums"]["campaign_status"]
@@ -91,10 +102,12 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           id?: string
+          max_retries?: number
           name: string
           payload?: Json
           posts_per_hour?: number
           randomize_seconds?: number
+          retry_backoff_seconds?: number
           scheduled_at?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["campaign_status"]
@@ -109,10 +122,12 @@ export type Database = {
           completed_at?: string | null
           created_at?: string
           id?: string
+          max_retries?: number
           name?: string
           payload?: Json
           posts_per_hour?: number
           randomize_seconds?: number
+          retry_backoff_seconds?: number
           scheduled_at?: string | null
           started_at?: string | null
           status?: Database["public"]["Enums"]["campaign_status"]
@@ -490,10 +505,18 @@ export type Database = {
         | "paused"
         | "completed"
         | "failed"
+        | "cancelled"
       campaign_type: "post" | "comment" | "reaction"
       log_level: "info" | "success" | "warning" | "error"
       metric_type: "post" | "video_rendered" | "click" | "success" | "fail"
-      run_status: "queued" | "running" | "success" | "failed" | "skipped"
+      run_status:
+        | "queued"
+        | "running"
+        | "success"
+        | "failed"
+        | "skipped"
+        | "paused"
+        | "cancelled"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -630,11 +653,20 @@ export const Constants = {
         "paused",
         "completed",
         "failed",
+        "cancelled",
       ],
       campaign_type: ["post", "comment", "reaction"],
       log_level: ["info", "success", "warning", "error"],
       metric_type: ["post", "video_rendered", "click", "success", "fail"],
-      run_status: ["queued", "running", "success", "failed", "skipped"],
+      run_status: [
+        "queued",
+        "running",
+        "success",
+        "failed",
+        "skipped",
+        "paused",
+        "cancelled",
+      ],
     },
   },
 } as const
