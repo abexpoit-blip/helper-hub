@@ -62,18 +62,25 @@ function classifyAsset(name: string) {
 }
 
 function ReleasePage() {
-  const { data, isLoading, error, refetch, isFetching } = useQuery<GhRelease>({
-    queryKey: ["gh-latest-release", GH_OWNER, GH_REPO],
+  const { data: releases, isLoading, error, refetch, isFetching } = useQuery<GhRelease[]>({
+    queryKey: ["gh-releases", GH_OWNER, GH_REPO],
     queryFn: async () => {
-      const res = await fetch(GH_API, { headers: { Accept: "application/vnd.github+json" } });
-      if (res.status === 404) throw new Error("NO_RELEASE");
+      const res = await fetch(GH_API_LIST, { headers: { Accept: "application/vnd.github+json" } });
       if (!res.ok) throw new Error(`GitHub API ${res.status}`);
-      return res.json();
+      const json = (await res.json()) as GhRelease[];
+      if (!Array.isArray(json) || json.length === 0) throw new Error("NO_RELEASE");
+      return json;
     },
     retry: 1,
     staleTime: 60_000,
   });
 
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  useEffect(() => {
+    if (releases && releases.length > 0 && !selectedTag) setSelectedTag(releases[0].tag_name);
+  }, [releases, selectedTag]);
+
+  const data = releases?.find(r => r.tag_name === selectedTag) ?? releases?.[0];
   const winAssets = (data?.assets ?? []).filter(a =>
     a.name.toLowerCase().endsWith(".exe") || a.name.toLowerCase().endsWith(".msi")
   );
