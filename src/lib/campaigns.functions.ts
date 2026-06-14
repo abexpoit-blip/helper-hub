@@ -93,10 +93,13 @@ export const updateCampaignStatus = createServerFn({ method: "POST" })
     z.object({ id: z.string().uuid(), status: campaignStatus }).parse(d)
   )
   .handler(async ({ data, context }) => {
-    const patch: Record<string, unknown> = { status: data.status };
-    if (data.status === "running") patch.started_at = new Date().toISOString();
+    const nowIso = new Date().toISOString();
+    const patch: { status: typeof data.status; started_at?: string; completed_at?: string } = {
+      status: data.status,
+    };
+    if (data.status === "running") patch.started_at = nowIso;
     if (data.status === "completed" || data.status === "cancelled" || data.status === "failed") {
-      patch.completed_at = new Date().toISOString();
+      patch.completed_at = nowIso;
     }
     const { error } = await context.supabase
       .from("campaigns")
