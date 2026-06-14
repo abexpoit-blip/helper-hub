@@ -109,6 +109,36 @@ function ReleasePage() {
           <BuildStatusBanner state={isLoading ? "loading" : error ? "error" : data ? "ready" : "idle"} errorMsg={(error as Error | undefined)?.message} release={data} />
         </div>
 
+        {/* Version selector */}
+        {releases && releases.length > 0 && (
+          <div className="glass rounded-2xl p-4 mb-6 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <History className="h-4 w-4" />
+              <span>Version:</span>
+            </div>
+            <div className="relative flex-1 min-w-[220px] max-w-md">
+              <select
+                value={selectedTag ?? ""}
+                onChange={(e) => setSelectedTag(e.target.value)}
+                className="w-full appearance-none rounded-xl bg-black/40 border border-white/10 px-4 py-2.5 pr-10 text-sm font-mono focus:outline-none focus:border-fuchsia-400/50 hover:border-white/20 transition cursor-pointer"
+              >
+                {releases.map((r, i) => {
+                  const hasWin = r.assets.some(a => /\.(exe|msi)$/i.test(a.name));
+                  return (
+                    <option key={r.tag_name} value={r.tag_name}>
+                      {r.tag_name} {i === 0 ? "(latest)" : ""} — {new Date(r.published_at).toLocaleDateString()} {hasWin ? "✓" : "⚠ no .exe"}
+                    </option>
+                  );
+                })}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {releases.length} release{releases.length === 1 ? "" : "s"} available
+            </div>
+          </div>
+        )}
+
         {/* Download cards */}
         {isLoading && (
           <div className="glass rounded-3xl p-10 text-center">
