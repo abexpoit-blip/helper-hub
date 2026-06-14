@@ -87,6 +87,17 @@ jobs:
             Write-Host "[OK] $f"
           }
 
+      - name: Upload generated icons (for verification)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-icons
+          path: |
+            app-icon.png
+            src-tauri/icons/*.png
+            src-tauri/icons/*.ico
+            src-tauri/icons/*.icns
+
       - name: Build Tauri app (MSI + NSIS installer + portable)
         id: tauri_build
         continue-on-error: true
