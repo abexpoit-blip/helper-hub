@@ -978,6 +978,8 @@ function SchedulerView() {
             <Field label="Randomize (±sec)" placeholder="90" value={String(rand)} onChange={(v) => setRand(parseInt(v) || 0)} />
             <Field label="Schedule At (optional)" placeholder="" type="datetime-local" value={scheduleAt} onChange={setScheduleAt} />
             <Field label="Link / Target URL" placeholder="https://…" value={link} onChange={setLink} />
+            <Field label="Max Retries (per run)" placeholder="2" value={String(maxRetries)} onChange={(v) => setMaxRetries(Math.max(0, Math.min(10, parseInt(v) || 0)))} />
+            <Field label="Retry Backoff (sec, exponential)" placeholder="60" value={String(backoff)} onChange={(v) => setBackoff(Math.max(5, parseInt(v) || 60))} />
           </div>
           <label className="block">
             <span className="mb-1.5 block text-[11px] uppercase tracking-widest text-muted-foreground">Spintax Body</span>
