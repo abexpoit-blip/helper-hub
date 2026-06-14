@@ -91,7 +91,8 @@ export async function runSchedulerTick() {
     });
 
     // Emit metrics
-    const events: { type: string; value: number; account_id: string | null; campaign_id: string; user_id: string }[] = [
+    type MetricType = "post" | "video_rendered" | "click" | "success" | "fail";
+    const events: { type: MetricType; value: number; account_id: string | null; campaign_id: string; user_id: string }[] = [
       {
         type: c.type === "post" ? "post" : c.type === "comment" ? "post" : "post",
         value: 1,
