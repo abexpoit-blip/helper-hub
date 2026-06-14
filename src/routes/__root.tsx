@@ -77,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "NEw" },
+      { name: "description", content: "Helper Hub is a Windows desktop application for managing and automating online campaigns." },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "NEw" },
+      { property: "og:description", content: "Helper Hub is a Windows desktop application for managing and automating online campaigns." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "NEw" },
+      { name: "twitter:description", content: "Helper Hub is a Windows desktop application for managing and automating online campaigns." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/bae7456a-8a58-4906-8d61-f9977113a34d/id-preview-f96a147f--63ddf58a-6f5b-462b-95b6-c5340c9bcdf8.lovable.app-1781465685365.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/bae7456a-8a58-4906-8d61-f9977113a34d/id-preview-f96a147f--63ddf58a-6f5b-462b-95b6-c5340c9bcdf8.lovable.app-1781465685365.png" },
     ],
     links: [
       {
