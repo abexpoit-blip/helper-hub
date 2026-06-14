@@ -56,6 +56,7 @@ export async function runSchedulerTick() {
       name: string;
       type: "post" | "comment" | "reaction";
       payload: { spintax?: string; link?: string; target_url?: string };
+      retry_backoff_seconds: number;
     };
     const startedAt = new Date().toISOString();
     await supabase
@@ -64,32 +65,53 @@ export async function runSchedulerTick() {
       .eq("id", run.id);
 
     // Simulate outcome (real delivery is desktop-client driven).
-    // 92% success baseline so the dashboard shows realistic metrics.
     const success = Math.random() > 0.08;
     const renderedText = c.payload?.spintax ? spin(c.payload.spintax) : null;
-
     const completedAt = new Date().toISOString();
-    await supabase
-      .from("campaign_runs")
-      .update({
-        status: success ? "success" : "failed",
-        completed_at: completedAt,
-        error: success ? null : "Account temporarily rate-limited",
-        result: success
-          ? { rendered: renderedText, link: c.payload?.link ?? c.payload?.target_url ?? null }
-          : null,
-      })
-      .eq("id", run.id);
+
+    const retryCount = (run as any).retry_count ?? 0;
+    const maxRetries = (run as any).max_retries ?? 0;
+    const willRetry = !success && retryCount < maxRetries;
+
+    if (willRetry) {
+      const backoff = c.retry_backoff_seconds ?? 60;
+      const nextAt = new Date(Date.now() + backoff * 1000 * Math.pow(2, retryCount)).toISOString();
+      await supabase
+        .from("campaign_runs")
+        .update({
+          status: "queued",
+          started_at: null,
+          completed_at: null,
+          retry_count: retryCount + 1,
+          next_retry_at: nextAt,
+          error: "Retry scheduled — previous attempt failed",
+        })
+        .eq("id", run.id);
+    } else {
+      await supabase
+        .from("campaign_runs")
+        .update({
+          status: success ? "success" : "failed",
+          completed_at: completedAt,
+          error: success ? null : "Account temporarily rate-limited",
+          result: success
+            ? { rendered: renderedText, link: c.payload?.link ?? c.payload?.target_url ?? null }
+            : null,
+        })
+        .eq("id", run.id);
+    }
 
     await supabase.from("run_logs").insert({
       run_id: run.id,
       campaign_id: run.campaign_id,
       user_id: run.user_id,
       account_id: run.account_id,
-      level: success ? "success" : "error",
+      level: success ? "success" : willRetry ? "warning" : "error",
       message: success
         ? `${c.type.toUpperCase()} dispatched: ${(renderedText ?? "").slice(0, 80) || "(no body)"}`
-        : `Run failed: rate-limited or session invalid`,
+        : willRetry
+          ? `Attempt ${retryCount + 1}/${maxRetries} failed — retrying with backoff`
+          : `Run failed (no retries left): rate-limited or session invalid`,
     });
 
     // Emit metrics
