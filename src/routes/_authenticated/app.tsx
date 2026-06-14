@@ -722,9 +722,41 @@ function IMaxView() {
             Auto-map Profiles
           </button>
         </div>
-        {test && !test.busy && (
-          <div className={`flex items-center gap-2 rounded-xl px-4 py-3 text-sm ring-1 ${test.ok ? "bg-emerald-400/10 text-emerald-300 ring-emerald-400/30" : "bg-rose-400/10 text-rose-300 ring-rose-400/30"}`}>
-            {test.ok ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />} {test.message}
+        {test && (
+          <div className={`flex items-center gap-2 rounded-xl px-4 py-3 text-sm ring-1 ${test.busy ? "bg-sky-400/10 text-sky-300 ring-sky-400/30" : test.ok ? "bg-emerald-400/10 text-emerald-300 ring-emerald-400/30" : "bg-rose-400/10 text-rose-300 ring-rose-400/30"}`}>
+            {test.busy ? <Loader2 className="h-4 w-4 animate-spin" /> : test.ok ? <Wifi className="h-4 w-4" /> : <WifiOff className="h-4 w-4" />} {test.message}
+          </div>
+        )}
+        {diag.length > 0 && (
+          <div className="glass rounded-2xl p-3 space-y-1.5">
+            <div className="mb-1 text-[10px] uppercase tracking-widest text-muted-foreground">Diagnostic Log</div>
+            {diag.map((s) => {
+              const tone =
+                s.status === "ok" ? "text-emerald-300" :
+                s.status === "fail" ? "text-rose-300" :
+                s.status === "warn" ? "text-amber-300" :
+                s.status === "running" ? "text-sky-300" : "text-muted-foreground";
+              const icon =
+                s.status === "ok" ? "✓" :
+                s.status === "fail" ? "✕" :
+                s.status === "warn" ? "!" :
+                s.status === "running" ? "…" : "·";
+              return (
+                <div key={s.id} className="rounded-lg bg-black/20 px-3 py-2 text-xs">
+                  <div className="flex items-center justify-between">
+                    <div className={`flex items-center gap-2 ${tone}`}>
+                      <span className="inline-grid h-4 w-4 place-items-center rounded-full bg-white/10 font-mono">{icon}</span>
+                      <span className="font-medium">{s.label}</span>
+                    </div>
+                    {s.ms != null && <span className="font-mono text-[10px] text-muted-foreground">{s.ms}ms</span>}
+                  </div>
+                  {s.detail && <div className="mt-1 ml-6 text-[11px] text-muted-foreground">{s.detail}</div>}
+                  {s.hint && (s.status === "fail" || s.status === "warn") && (
+                    <div className="mt-1 ml-6 text-[11px] text-amber-200/90">💡 {s.hint}</div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 
