@@ -928,6 +928,8 @@ function SchedulerView() {
   const [pph, setPph] = useState(30);
   const [rand, setRand] = useState(90);
   const [scheduleAt, setScheduleAt] = useState("");
+  const [maxRetries, setMaxRetries] = useState(2);
+  const [backoff, setBackoff] = useState(60);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [openCampaign, setOpenCampaign] = useState<string | null>(null);
 
@@ -940,6 +942,8 @@ function SchedulerView() {
         link: link || undefined,
         posts_per_hour: pph,
         randomize_seconds: rand,
+        max_retries: maxRetries,
+        retry_backoff_seconds: backoff,
         scheduled_at: scheduleAt ? new Date(scheduleAt).toISOString() : undefined,
         account_ids: Array.from(selected),
       },
