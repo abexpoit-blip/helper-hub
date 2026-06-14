@@ -41,12 +41,14 @@ export async function runSchedulerTick() {
     summary.startedCampaigns++;
   }
 
-  // 2) process queued runs for any running campaign
+  // 2) process queued runs for any running campaign whose next_retry_at is due
+  const nowIso = new Date().toISOString();
   const { data: queued } = await supabase
     .from("campaign_runs")
-    .select("id,campaign_id,user_id,account_id,campaigns!inner(name,type,payload,status)")
+    .select("id,campaign_id,user_id,account_id,retry_count,max_retries,next_retry_at,campaigns!inner(name,type,payload,status,retry_backoff_seconds)")
     .eq("status", "queued")
     .eq("campaigns.status", "running")
+    .or(`next_retry_at.is.null,next_retry_at.lte.${nowIso}`)
     .limit(BATCH_PER_TICK);
 
   for (const run of queued ?? []) {
