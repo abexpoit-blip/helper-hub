@@ -12,9 +12,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { listAccounts, importAccounts, updateAccountStatus, deleteAccount, mapImaxProfile, attachProxy } from "@/lib/accounts.functions";
 import { listProxies, addProxy, deleteProxy } from "@/lib/proxies.functions";
 import { getImaxConfig, saveImaxConfig, recordImaxTest } from "@/lib/imax.functions";
-import { createCampaign, listCampaigns, listLogs, updateCampaignStatus } from "@/lib/campaigns.functions";
+import { createCampaign, listCampaigns, listLogs, listRuns, updateCampaignStatus, setCampaignRetryPolicy, controlRun } from "@/lib/campaigns.functions";
 import { getDashboardStats } from "@/lib/metrics.functions";
-import { testImaxConnection, listImaxProfiles } from "@/lib/imax-client";
+import { testImaxConnection, listImaxProfiles, type DiagStep } from "@/lib/imax-client";
 
 export const Route = createFileRoute("/_authenticated/app")({
   head: () => ({ meta: [{ title: "Dashboard · FB Viral Traffic Engine Pro" }] }),
