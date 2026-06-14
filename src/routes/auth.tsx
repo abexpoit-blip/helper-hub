@@ -135,6 +135,24 @@ function AuthPage() {
           </button>
         </form>
 
+        {/* Demo credentials */}
+        <div className="mt-5 rounded-xl border border-emerald-400/30 bg-emerald-500/5 p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-[11px] uppercase tracking-widest text-emerald-300 font-semibold">Demo Login</div>
+            <button
+              type="button"
+              onClick={() => { setEmail("demo@fbviral.app"); setPassword("Demo@12345"); setMode("signin"); }}
+              className="text-[11px] px-2.5 py-1 rounded-lg bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-200 transition"
+            >
+              Fill credentials
+            </button>
+          </div>
+          <div className="space-y-1 text-xs font-mono text-muted-foreground">
+            <div>📧 <span className="text-foreground">demo@fbviral.app</span></div>
+            <div>🔑 <span className="text-foreground">Demo@12345</span></div>
+          </div>
+        </div>
+
         <div className="mt-4 text-center text-sm text-muted-foreground">
           {mode === "signin" ? (
             <>New here?{" "}

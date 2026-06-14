@@ -1,13 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import {
   Download, Package, Shield, CheckCircle2, AlertTriangle, Loader2,
-  ExternalLink, Cpu, HardDrive, Zap, FileArchive, Github,
+  ExternalLink, Cpu, HardDrive, Zap, FileArchive, Github, History, ChevronDown,
 } from "lucide-react";
 
 const GH_OWNER = "abexpoit-blip";
 const GH_REPO = "helper-hub";
-const GH_API = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/releases/latest`;
+const GH_API_LIST = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/releases?per_page=30`;
 const GH_RELEASES = `https://github.com/${GH_OWNER}/${GH_REPO}/releases`;
 const GH_ACTIONS = `https://github.com/${GH_OWNER}/${GH_REPO}/actions`;
 
@@ -61,18 +62,25 @@ function classifyAsset(name: string) {
 }
 
 function ReleasePage() {
-  const { data, isLoading, error, refetch, isFetching } = useQuery<GhRelease>({
-    queryKey: ["gh-latest-release", GH_OWNER, GH_REPO],
+  const { data: releases, isLoading, error, refetch, isFetching } = useQuery<GhRelease[]>({
+    queryKey: ["gh-releases", GH_OWNER, GH_REPO],
     queryFn: async () => {
-      const res = await fetch(GH_API, { headers: { Accept: "application/vnd.github+json" } });
-      if (res.status === 404) throw new Error("NO_RELEASE");
+      const res = await fetch(GH_API_LIST, { headers: { Accept: "application/vnd.github+json" } });
       if (!res.ok) throw new Error(`GitHub API ${res.status}`);
-      return res.json();
+      const json = (await res.json()) as GhRelease[];
+      if (!Array.isArray(json) || json.length === 0) throw new Error("NO_RELEASE");
+      return json;
     },
     retry: 1,
     staleTime: 60_000,
   });
 
+  const [selectedTag, setSelectedTag] = useState<string | null>(null);
+  useEffect(() => {
+    if (releases && releases.length > 0 && !selectedTag) setSelectedTag(releases[0].tag_name);
+  }, [releases, selectedTag]);
+
+  const data = releases?.find(r => r.tag_name === selectedTag) ?? releases?.[0];
   const winAssets = (data?.assets ?? []).filter(a =>
     a.name.toLowerCase().endsWith(".exe") || a.name.toLowerCase().endsWith(".msi")
   );
@@ -100,6 +108,36 @@ function ReleasePage() {
           {/* Build status banner */}
           <BuildStatusBanner state={isLoading ? "loading" : error ? "error" : data ? "ready" : "idle"} errorMsg={(error as Error | undefined)?.message} release={data} />
         </div>
+
+        {/* Version selector */}
+        {releases && releases.length > 0 && (
+          <div className="glass rounded-2xl p-4 mb-6 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <History className="h-4 w-4" />
+              <span>Version:</span>
+            </div>
+            <div className="relative flex-1 min-w-[220px] max-w-md">
+              <select
+                value={selectedTag ?? ""}
+                onChange={(e) => setSelectedTag(e.target.value)}
+                className="w-full appearance-none rounded-xl bg-black/40 border border-white/10 px-4 py-2.5 pr-10 text-sm font-mono focus:outline-none focus:border-fuchsia-400/50 hover:border-white/20 transition cursor-pointer"
+              >
+                {releases.map((r, i) => {
+                  const hasWin = r.assets.some(a => /\.(exe|msi)$/i.test(a.name));
+                  return (
+                    <option key={r.tag_name} value={r.tag_name}>
+                      {r.tag_name} {i === 0 ? "(latest)" : ""} — {new Date(r.published_at).toLocaleDateString()} {hasWin ? "✓" : "⚠ no .exe"}
+                    </option>
+                  );
+                })}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {releases.length} release{releases.length === 1 ? "" : "s"} available
+            </div>
+          </div>
+        )}
 
         {/* Download cards */}
         {isLoading && (
