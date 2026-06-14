@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import {
   Download, Package, Shield, CheckCircle2, AlertTriangle, Loader2,
-  ExternalLink, Cpu, HardDrive, Zap, FileArchive, Github, History, ChevronDown,
+  ExternalLink, Cpu, HardDrive, Zap, FileArchive, Github, History, ChevronDown, Play,
 } from "lucide-react";
 
 const GH_OWNER = "abexpoit-blip";
@@ -325,14 +325,23 @@ function NoReleaseYet() {
           <p className="text-sm text-muted-foreground mt-1">
             The GitHub Actions workflow builds the Windows .exe and attaches it to a Release when you push a version tag.
           </p>
-          <div className="mt-5 rounded-2xl bg-black/30 border border-white/5 p-4 font-mono text-xs space-y-1">
-            <div className="text-emerald-300"># From your local clone of helper-hub:</div>
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <a
+              href={GH_ACTIONS}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-fuchsia-500 to-rose-500 px-5 py-2.5 text-sm font-medium text-white hover:opacity-90 transition"
+            >
+              <Play className="h-4 w-4" />
+              Trigger Build
+            </a>
+            <span className="text-xs text-muted-foreground">Opens GitHub Actions → “Build Windows Desktop App” → Run workflow</span>
+          </div>
+          <div className="mt-4 rounded-2xl bg-black/30 border border-white/5 p-4 font-mono text-xs space-y-1">
+            <div className="text-emerald-300"># Or from your local clone:</div>
             <div>git tag v1.0.0</div>
             <div>git push origin v1.0.0</div>
           </div>
-          <p className="text-xs text-muted-foreground mt-3">
-            Or trigger manually: open <a href={GH_ACTIONS} target="_blank" rel="noreferrer" className="text-sky-300 hover:text-sky-200 inline-flex items-center gap-1">Actions <ExternalLink className="h-3 w-3" /></a> → "Build Windows Desktop App" → Run workflow.
-          </p>
         </div>
       </div>
     </div>
