@@ -1,13 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import {
   Download, Package, Shield, CheckCircle2, AlertTriangle, Loader2,
-  ExternalLink, Cpu, HardDrive, Zap, FileArchive, Github,
+  ExternalLink, Cpu, HardDrive, Zap, FileArchive, Github, History, ChevronDown,
 } from "lucide-react";
 
 const GH_OWNER = "abexpoit-blip";
 const GH_REPO = "helper-hub";
-const GH_API = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/releases/latest`;
+const GH_API_LIST = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/releases?per_page=30`;
 const GH_RELEASES = `https://github.com/${GH_OWNER}/${GH_REPO}/releases`;
 const GH_ACTIONS = `https://github.com/${GH_OWNER}/${GH_REPO}/actions`;
 
