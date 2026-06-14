@@ -319,7 +319,7 @@ function BuildStatusBanner({ state, errorMsg, release }: { state: "loading" | "e
         <AlertTriangle className="h-5 w-5 text-amber-300" />
         <div>
           <div className="font-medium text-amber-200">No release published yet</div>
-          <div className="text-xs text-muted-foreground">Run the Windows workflow; the page will show download cards after it finishes.</div>
+          <div className="text-xs text-muted-foreground">Open the “Build Windows Desktop App” workflow, then click Run workflow.</div>
         </div>
       </div>
     );
@@ -365,10 +365,12 @@ function NoReleaseYet() {
               <Play className="h-4 w-4" />
               Trigger Build
             </a>
-            <span className="text-xs text-muted-foreground">Opens GitHub Actions → “Build Windows Desktop App” → Run workflow</span>
+            <span className="text-xs text-muted-foreground">If GitHub shows “All workflows”, click “Build Windows Desktop App” in the left sidebar, then Run workflow.</span>
           </div>
           <div className="mt-4 rounded-2xl bg-black/30 border border-white/5 p-4 font-mono text-xs space-y-1">
-            <div className="text-emerald-300"># Or from your local clone:</div>
+            <div className="text-emerald-300"># GitHub must show one run here after you click Run workflow.</div>
+            <div>Actions → Build Windows Desktop App → Run workflow → main</div>
+            <div className="pt-2 text-emerald-300"># Or from your local clone:</div>
             <div>git tag v1.0.0</div>
             <div>git push origin v1.0.0</div>
           </div>
