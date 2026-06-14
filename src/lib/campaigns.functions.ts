@@ -190,8 +190,15 @@ export const controlRun = createServerFn({ method: "POST" })
       .single();
     if (gErr || !run) throw new Error("Run not found");
 
-    let next: string = run.status;
-    const patch: Record<string, unknown> = {};
+    let next: "queued" | "paused" | "cancelled" = run.status as never;
+    const patch: {
+      status?: "queued" | "paused" | "cancelled";
+      completed_at?: string | null;
+      started_at?: string | null;
+      error?: string | null;
+      retry_count?: number;
+      max_retries?: number;
+    } = {};
     switch (data.action) {
       case "pause":
         if (!["queued", "running"].includes(run.status)) throw new Error("Run is not pausable");
@@ -206,16 +213,17 @@ export const controlRun = createServerFn({ method: "POST" })
         next = "cancelled";
         patch.completed_at = new Date().toISOString();
         break;
-      case "retry":
+      case "retry": {
         if (!["failed", "cancelled"].includes(run.status)) throw new Error("Only failed/cancelled runs can be retried");
         next = "queued";
         patch.error = null;
         patch.started_at = null;
         patch.completed_at = null;
-        patch.retry_count = (run.retry_count ?? 0) + 1;
-        // bump ceiling so manual retry always wins
-        if ((run.max_retries ?? 0) < patch.retry_count) patch.max_retries = patch.retry_count;
+        const nextRetry = (run.retry_count ?? 0) + 1;
+        patch.retry_count = nextRetry;
+        if ((run.max_retries ?? 0) < nextRetry) patch.max_retries = nextRetry;
         break;
+      }
     }
     patch.status = next;
     const { error } = await context.supabase
