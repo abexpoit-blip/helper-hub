@@ -387,7 +387,7 @@ function AccountsView() {
         <BulkExcelUpload
           busy={importMut.isPending}
           onClose={() => setShowExcel(false)}
-          onImport={(rows) => {
+          onImport={(rows: ExcelAccountRow[]) => {
             importMut.mutate(rows, { onSuccess: () => setShowExcel(false) });
           }}
         />
