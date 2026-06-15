@@ -86,7 +86,14 @@ export const recordLoginAttempt = createServerFn({ method: "POST" })
     }).parse(d)
   )
   .handler(async ({ data, context }) => {
-    const patch: Record<string, any> = {
+    const patch: {
+      last_login_method: string;
+      last_login_at: string;
+      status: "active" | "flagged";
+      last_error: string | null;
+      cookies_ciphertext?: string;
+      cookies_iv?: string;
+    } = {
       last_login_method: data.method,
       last_login_at: new Date().toISOString(),
       status: data.success ? "active" : "flagged",
