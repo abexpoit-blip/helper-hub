@@ -105,6 +105,9 @@ function Sidebar({ view, setView }: { view: ViewKey; setView: (v: ViewKey) => vo
           className="glass mt-6 flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground">
           <LogOut className="h-3.5 w-3.5" /> Sign out
         </button>
+        <div className="mt-5 flex justify-center">
+          <DevCredit />
+        </div>
       </div>
     </aside>
   );
