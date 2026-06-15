@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "identifier": "com.fbviral.trafficengine",
   "build": {
-    "frontendDist": "https://project--63ddf58a-6f5b-462b-95b6-c5340c9bcdf8.lovable.app"
+    "frontendDist": "https://wait-for-me-tool.lovable.app"
   },
   "app": {
     "windows": [
@@ -18,7 +18,7 @@
         "fullscreen": false,
         "decorations": true,
         "transparent": false,
-        "url": "https://project--63ddf58a-6f5b-462b-95b6-c5340c9bcdf8.lovable.app"
+        "url": "https://wait-for-me-tool.lovable.app"
       }
     ],
     "security": {
