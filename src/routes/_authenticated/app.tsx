@@ -6,8 +6,11 @@ import {
   LayoutDashboard, Users, Globe, Link2, Wand2, CalendarClock,
   Plus, Search, Zap, TrendingUp, Activity, PlayCircle, Shield, Cpu,
   Sparkles, RefreshCw, Upload, CheckCircle2, AlertTriangle, XCircle,
-  ChevronRight, LogOut, Loader2, Trash2, Wifi, WifiOff, ShieldAlert,
+  ChevronRight, LogOut, Loader2, Trash2, Wifi, WifiOff, ShieldAlert, FileSpreadsheet,
 } from "lucide-react";
+import { PolicyCheckView } from "@/components/PolicyCheckView";
+import { ViralReshaperView } from "@/components/ViralReshaperView";
+import { BulkExcelUpload, type ExcelAccountRow } from "@/components/BulkExcelUpload";
 import { PolicyCheckView } from "@/components/PolicyCheckView";
 import { ViralReshaperView } from "@/components/ViralReshaperView";
 import { supabase } from "@/integrations/supabase/client";
