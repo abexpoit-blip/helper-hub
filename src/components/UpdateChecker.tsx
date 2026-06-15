@@ -28,10 +28,16 @@ const DISMISS_KEY = "update_dismissed_tag";
 const AUTO_KEY = "update_auto_download";
 
 function pickInstaller(assets: Asset[]): Asset | undefined {
+  const exes = assets.filter((a) => a.name.toLowerCase().endsWith(".exe"));
+  // Prefer smaller setup.exe over portable.exe (smaller = faster download)
+  const setup = exes.find((a) => /setup/i.test(a.name));
+  if (setup) return setup;
+  if (exes.length) {
+    // pick smallest .exe
+    return exes.slice().sort((a, b) => (a.size || 0) - (b.size || 0))[0];
+  }
   return (
-    assets.find((a) => a.name.toLowerCase().endsWith(".exe")) ??
-    assets.find((a) => a.name.toLowerCase().endsWith(".msi")) ??
-    assets[0]
+    assets.find((a) => a.name.toLowerCase().endsWith(".msi")) ?? assets[0]
   );
 }
 
