@@ -1,0 +1,7 @@
+
+ALTER TABLE public.fb_accounts
+  ADD COLUMN IF NOT EXISTS uid TEXT,
+  ADD COLUMN IF NOT EXISTS password_ciphertext TEXT,
+  ADD COLUMN IF NOT EXISTS password_iv TEXT,
+  ADD COLUMN IF NOT EXISTS last_login_method TEXT,
+  ADD COLUMN IF NOT EXISTS last_login_at TIMESTAMPTZ;
