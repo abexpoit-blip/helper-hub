@@ -1,70 +1,86 @@
-## কী Build করব (Order অনুযায়ী)
+## Build Plan — 6 Big Features (Phased)
 
-আপনি ৪টা feature চেয়েছেন। আমি **এক phase-এ একটা করে** ship করব, যাতে প্রতিটা ভালোভাবে test করা যায়।
-
----
-
-### Phase 1 — Facebook Policy Checker (AI Alert) 🛡️
-নতুন page `/policy-check`:
-- বড় textarea — post content / link / caption paste করবেন
-- "Check Now" button → Lovable AI (Gemini) check করবে
-- Result card দেখাবে:
-  - ✅ Safe / ⚠️ Risky / 🚫 Will be removed
-  - কোন rule ভঙ্গ হচ্ছে (spam, misleading, copyright, hate, adult, clickbait, ইত্যাদি)
-  - কী fix করতে হবে — suggestion সহ
-- Backend: `src/lib/policy-check.functions.ts` (server function, Lovable AI Gateway)
+স্কোপ অনেক বড়, তাই **৬ phase** এ ভাগ করছি। প্রতি phase শেষে আপনি test করবেন, তারপর next phase।
 
 ---
 
-### Phase 2 — Direct URL + Excel Bulk Upload 📊
-যেখানে এখন shortener আছে, সেটা refactor:
-- Shortener call বাদ — সরাসরি URL pass through
-- নতুন "Bulk Upload" tab:
-  - Excel/CSV file upload (.xlsx, .csv)
-  - Auto-parse — columns: `url`, `caption`, `schedule_time` (optional)
-  - Preview table → "Process All" button
-  - প্রতিটা row Supabase `campaigns` table-এ save হবে
-- Library: `xlsx` (SheetJS), already lightweight
+### **Phase A — Excel FB Account Upload + Auto-Fallback Login** 🔑
+- **UI**: `Accounts` tab-এ "Bulk Upload Excel" button
+- **Excel columns**: `uid`, `password`, `cookies` (যেকোনো order, optional columns)
+- **SheetJS** দিয়ে parse → preview table → save to `fb_accounts` table
+- **Auto-fallback logic** (backend serverFn):
+  1. প্রথমে cookies দিয়ে login try
+  2. Cookies invalid/expired হলে → UID + PASSWORD দিয়ে login
+  3. Success হলে new cookies save করে রাখবে (future use)
+- **Encryption**: password `APP_ENCRYPTION_KEY` দিয়ে encrypt করে store
+
+### **Phase B — Advanced Facebook Policy Checker** 🛡️
+- বর্তমান `/policy-check` upgrade
+- Caption + URL + media description একসাথে scan
+- Risk terms database (1000+ FB-banned keywords/phrases)
+- Link reputation check (shortener, blacklist domain)
+- Severity breakdown: Hate / Spam / Misleading / Copyright / Adult
+- **Pre-post warning modal** — যেকোনো post action-এর আগে auto check
+
+### **Phase C — AI Thumbnail Generator** 🖼️
+- Video URL/topic input → AI দিয়ে ৪টা thumbnail variant generate (Lovable AI image gen: `google/gemini-3.1-flash-image-preview`)
+- Text style options: **Bold Shock / Curiosity / Emoji Pack / Minimal**
+- Live preview grid → choose & download PNG
+- Auto-save to `thumbnails` table (history)
+
+### **Phase D — 10 Hook Variants + A/B Test Scheduler** 🎯
+- Topic input → Gemini generate ১০টা hook (different angles: shock, question, story, stat, controversy etc.)
+- Each hook-এর জন্য predicted score
+- **A/B Schedule**: prime time slots (BD: 7-10 PM)-এ ৫টা hook auto-schedule
+- `ab_tests` table track করবে কোন hook winner
+
+### **Phase E — Viral Score History Dashboard** 📊
+- New `/dashboard` route
+- Recharts দিয়ে: viral score over time line chart
+- Per-edit version compare (side-by-side: v1 vs v2 vs v3)
+- Filter by niche / language / audience
+- `viral_history` table store every analysis
+
+### **Phase F — Video Upload + Edit + Download (Tauri ffmpeg bundle)** 🎬
+- **Tauri Rust side**: ffmpeg sidecar binary bundle
+- Drag-drop local video file
+- Apply preset effects (Reels Killer / Duplicate Bypass etc.)
+- Process locally via ffmpeg
+- Download edited `.mp4`
+- **App size will grow ~80MB** (ffmpeg)
 
 ---
 
-### Phase 3 — Embed Code Generator 🎬
-নতুন page `/embed-generator`:
-- Video URL paste (YouTube, FB, Vimeo, TikTok)
-- Auto-detect platform → SEO-optimized embed code generate:
-  - Responsive `<iframe>` wrapper
-  - VideoObject JSON-LD schema (Google ranking)
-  - Open Graph meta tags
-  - lazy-load attribute
-- Copy button + download as `.html`
-- AI দিয়ে title/description suggest করতে পারে video URL থেকে
+## Technical Plan
+
+**Database (new tables)**: `thumbnails`, `ab_tests`, `viral_history`, `policy_risk_terms`, `account_login_logs`
+
+**Backend serverFns**:
+- `bulk-upload-accounts.functions.ts`
+- `account-login.functions.ts` (cookie → UID/PASS fallback)
+- `advanced-policy-check.functions.ts`
+- `generate-thumbnails.functions.ts`
+- `generate-hooks.functions.ts`
+- `schedule-ab-test.functions.ts`
+- `viral-history.functions.ts`
+
+**Frontend**:
+- `AccountUploadView.tsx`, `ThumbnailGeneratorView.tsx`, `HookVariantsView.tsx`, `DashboardView.tsx`, `VideoEditorView.tsx`
+- Existing `PolicyCheckView` upgrade
+
+**Tauri (Phase F)**: `src-tauri/Cargo.toml` add `tauri-plugin-shell` + ffmpeg sidecar; `tauri.conf.json` externalBin config
 
 ---
 
-### Phase 4 — Premium UI Redesign + App Icon 🎨
-- নতুন design system: dark premium theme (deep navy + gold accent, বা আপনি choose করবেন)
-- Sidebar redesign, dashboard cards, gradients, shadows
-- নতুন app icon generate (Lovable image gen) — Tauri `src-tauri/icons/` update
-- Tauri rebuild → নতুন `.exe`
-
----
-
-## Video Download / Edit সম্পর্কে
-আপনি বলেছেন external tool suggest করতে — Phase 1 শেষে আমি একটা **"Tools" page** add করব যেখানে free tools এর link থাকবে:
-- **yt-dlp** (YouTube/FB/TikTok download)
-- **HandBrake** (video convert)
-- **CapCut / DaVinci Resolve** (edit)
-- Step-by-step Bangla guide সহ
-
----
-
-## Deployment
-প্রতি phase এর শেষে আপনি commands পাবেন:
+## Deployment per phase
+প্রতি phase শেষে:
 ```bash
 git tag v0.0.X && git push origin v0.0.X
 ```
-Build complete হলে GitHub Releases থেকে নতুন `.exe` download করবেন।
+GitHub Actions auto-build → Release-এ নতুন `.exe`।
 
 ---
 
-**শুরু করব Phase 1 দিয়ে?** Approve করলে আমি এখনই Facebook Policy Checker build করব।
+## এখন শুরু করছি: **Phase A (Excel FB Account Upload)**
+
+এটা finish করে আপনাকে test করতে দিব, তারপর Phase B-তে যাবো। OK?
