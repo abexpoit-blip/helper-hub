@@ -12,6 +12,7 @@ import { PolicyCheckView } from "@/components/PolicyCheckView";
 import { ViralReshaperView } from "@/components/ViralReshaperView";
 import { BulkExcelUpload, type ExcelAccountRow } from "@/components/BulkExcelUpload";
 import { DevCredit } from "@/components/DevCredit";
+import { UpdateChecker } from "@/components/UpdateChecker";
 import { supabase } from "@/integrations/supabase/client";
 import { listAccounts, importAccounts, updateAccountStatus, deleteAccount, mapImaxProfile, attachProxy } from "@/lib/accounts.functions";
 import { listProxies, addProxy, deleteProxy } from "@/lib/proxies.functions";
@@ -59,6 +60,7 @@ function App() {
           {view === "policy" && <PolicyCheckView />}
         </div>
       </main>
+      <UpdateChecker />
     </div>
   );
 }
