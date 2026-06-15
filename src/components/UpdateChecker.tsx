@@ -28,10 +28,16 @@ const DISMISS_KEY = "update_dismissed_tag";
 const AUTO_KEY = "update_auto_download";
 
 function pickInstaller(assets: Asset[]): Asset | undefined {
+  const exes = assets.filter((a) => a.name.toLowerCase().endsWith(".exe"));
+  // Prefer smaller setup.exe over portable.exe (smaller = faster download)
+  const setup = exes.find((a) => /setup/i.test(a.name));
+  if (setup) return setup;
+  if (exes.length) {
+    // pick smallest .exe
+    return exes.slice().sort((a, b) => (a.size || 0) - (b.size || 0))[0];
+  }
   return (
-    assets.find((a) => a.name.toLowerCase().endsWith(".exe")) ??
-    assets.find((a) => a.name.toLowerCase().endsWith(".msi")) ??
-    assets[0]
+    assets.find((a) => a.name.toLowerCase().endsWith(".msi")) ?? assets[0]
   );
 }
 
@@ -77,54 +83,53 @@ export function UpdateChecker() {
     return () => clearInterval(id);
   }, []);
 
-  // Auto-download in background when a new release is detected
-  useEffect(() => {
-    if (!release) return;
-    if (!autoDownload) return;
-    if (!isNewer(release.tag_name, APP_VERSION)) return;
-    if (dlStartedForRef.current === release.tag_name) return;
-
-    const asset = pickInstaller(release.assets);
-    if (!asset) return;
-
-    dlStartedForRef.current = release.tag_name;
+  async function startBackgroundDownload(asset: Asset, tag: string) {
+    if (dlStartedForRef.current === tag) {
+      console.log("[UpdateChecker] already downloading", tag);
+      return;
+    }
+    dlStartedForRef.current = tag;
     setDlError(null);
     setDlBlobUrl(null);
     setDlProgress(0);
     setDlFileName(asset.name);
-
-    const controller = new AbortController();
-    (async () => {
-      try {
-        const res = await fetch(asset.browser_download_url, {
-          signal: controller.signal,
-        });
-        if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
-        const total = Number(res.headers.get("content-length")) || asset.size || 0;
-        const reader = res.body.getReader();
-        const chunks: Uint8Array[] = [];
-        let received = 0;
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          if (value) {
-            chunks.push(value);
-            received += value.length;
-            if (total > 0) setDlProgress(Math.round((received / total) * 100));
-          }
+    console.log("[UpdateChecker] start download:", asset.name, asset.browser_download_url);
+    try {
+      const res = await fetch(asset.browser_download_url);
+      console.log("[UpdateChecker] response", res.status);
+      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+      const total = Number(res.headers.get("content-length")) || asset.size || 0;
+      const reader = res.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let received = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) {
+          chunks.push(value);
+          received += value.length;
+          if (total > 0) setDlProgress(Math.round((received / total) * 100));
         }
-        const blob = new Blob(chunks as BlobPart[], {
-          type: "application/octet-stream",
-        });
-        setDlBlobUrl(URL.createObjectURL(blob));
-        setDlProgress(100);
-      } catch (e: unknown) {
-        setDlError(e instanceof Error ? e.message : "Download failed");
-        dlStartedForRef.current = null;
       }
-    })();
+      const blob = new Blob(chunks as BlobPart[], { type: "application/octet-stream" });
+      setDlBlobUrl(URL.createObjectURL(blob));
+      setDlProgress(100);
+      console.log("[UpdateChecker] done");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Download failed";
+      console.error("[UpdateChecker] error:", msg);
+      setDlError(msg);
+      dlStartedForRef.current = null;
+    }
+  }
 
-    return () => controller.abort();
+  useEffect(() => {
+    if (!release || !autoDownload) return;
+    if (!isNewer(release.tag_name, APP_VERSION)) return;
+    const asset = pickInstaller(release.assets);
+    if (!asset) return;
+    startBackgroundDownload(asset, release.tag_name);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [release, autoDownload]);
 
   if (!release) return null;
@@ -180,7 +185,7 @@ export function UpdateChecker() {
         )}
 
         {/* Auto-download toggle */}
-        <label className="mb-3 flex cursor-pointer items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+        <label className="mb-2 flex cursor-pointer items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2">
           <span className="text-xs text-white/80">Auto-download in background</span>
           <input
             type="checkbox"
@@ -189,6 +194,16 @@ export function UpdateChecker() {
             className="h-4 w-4 accent-fuchsia-500"
           />
         </label>
+
+        {/* Manual background-download trigger */}
+        {!isDownloading && !isReady && installer && (
+          <button
+            onClick={() => startBackgroundDownload(installer, release.tag_name)}
+            className="mb-3 w-full rounded-xl border border-fuchsia-400/30 bg-fuchsia-500/10 px-3 py-1.5 text-[11px] text-fuchsia-200 hover:bg-fuchsia-500/20"
+          >
+            ⚡ Download now in background ({(installer.size / 1024 / 1024).toFixed(1)} MB)
+          </button>
+        )}
 
         {/* Progress */}
         {isDownloading && (
