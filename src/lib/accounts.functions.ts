@@ -13,12 +13,14 @@ const importInput = z.object({
         user_agent: z.string().max(500).optional(),
         cookies: z.string().max(50_000).optional(),
         token: z.string().max(8_000).optional(),
+        uid: z.string().max(120).optional(),
+        password: z.string().max(500).optional(),
         imax_profile_id: z.string().max(120).optional(),
         proxy_id: z.string().uuid().optional().nullable(),
       })
     )
     .min(1)
-    .max(500),
+    .max(2000),
 });
 
 export const importAccounts = createServerFn({ method: "POST" })
@@ -29,6 +31,7 @@ export const importAccounts = createServerFn({ method: "POST" })
     const rows = data.accounts.map((a) => {
       const c = a.cookies ? encryptString(a.cookies) : { ciphertext: null, iv: null };
       const t = a.token ? encryptString(a.token) : { ciphertext: null, iv: null };
+      const p = a.password ? encryptString(a.password) : { ciphertext: null, iv: null };
       return {
         user_id: context.userId,
         label: a.label,
@@ -38,6 +41,9 @@ export const importAccounts = createServerFn({ method: "POST" })
         cookies_iv: c.iv,
         token_ciphertext: t.ciphertext,
         token_iv: t.iv,
+        uid: a.uid ?? null,
+        password_ciphertext: p.ciphertext,
+        password_iv: p.iv,
         imax_profile_id: a.imax_profile_id ?? null,
         proxy_id: a.proxy_id ?? null,
       };
@@ -48,6 +54,60 @@ export const importAccounts = createServerFn({ method: "POST" })
       .select("id");
     if (error) throw new Error(error.message);
     return { inserted: inserted?.length ?? 0 };
+  });
+
+export const planAccountLogin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: row, error } = await context.supabase
+      .from("fb_accounts")
+      .select("id,label,uid,cookies_ciphertext,password_ciphertext,last_login_method")
+      .eq("id", data.id)
+      .single();
+    if (error || !row) throw new Error(error?.message || "Account not found");
+    const hasCookies = !!row.cookies_ciphertext;
+    const hasPass = !!(row.uid && row.password_ciphertext);
+    const strategy: "cookies" | "uid_password" | "none" =
+      hasCookies ? "cookies" : hasPass ? "uid_password" : "none";
+    const fallback: "uid_password" | null = hasCookies && hasPass ? "uid_password" : null;
+    return { strategy, fallback, label: row.label, uid: row.uid };
+  });
+
+export const recordLoginAttempt = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) =>
+    z.object({
+      id: z.string().uuid(),
+      method: z.enum(["cookies", "uid_password"]),
+      success: z.boolean(),
+      newCookies: z.string().max(50_000).optional(),
+      error: z.string().max(500).optional(),
+    }).parse(d)
+  )
+  .handler(async ({ data, context }) => {
+    const patch: {
+      last_login_method: string;
+      last_login_at: string;
+      status: "active" | "flagged";
+      last_error: string | null;
+      cookies_ciphertext?: string;
+      cookies_iv?: string;
+    } = {
+      last_login_method: data.method,
+      last_login_at: new Date().toISOString(),
+      status: data.success ? "active" : "flagged",
+      last_error: data.success ? null : (data.error ?? "login failed"),
+    };
+    if (data.success && data.newCookies) {
+      const { encryptString } = await import("./crypto.server");
+      const c = encryptString(data.newCookies);
+      patch.cookies_ciphertext = c.ciphertext;
+      patch.cookies_iv = c.iv;
+    }
+    const { error } = await context.supabase.from("fb_accounts").update(patch).eq("id", data.id);
+    if (error) throw new Error(error.message);
+    return { ok: true };
   });
 
 export const listAccounts = createServerFn({ method: "GET" })

@@ -149,12 +149,17 @@ export type Database = {
           imax_profile_id: string | null
           label: string
           last_error: string | null
+          last_login_at: string | null
+          last_login_method: string | null
           last_sync_at: string | null
+          password_ciphertext: string | null
+          password_iv: string | null
           proxy_id: string | null
           region: string | null
           status: Database["public"]["Enums"]["account_status"]
           token_ciphertext: string | null
           token_iv: string | null
+          uid: string | null
           updated_at: string
           user_agent: string | null
           user_id: string
@@ -167,12 +172,17 @@ export type Database = {
           imax_profile_id?: string | null
           label: string
           last_error?: string | null
+          last_login_at?: string | null
+          last_login_method?: string | null
           last_sync_at?: string | null
+          password_ciphertext?: string | null
+          password_iv?: string | null
           proxy_id?: string | null
           region?: string | null
           status?: Database["public"]["Enums"]["account_status"]
           token_ciphertext?: string | null
           token_iv?: string | null
+          uid?: string | null
           updated_at?: string
           user_agent?: string | null
           user_id: string
@@ -185,12 +195,17 @@ export type Database = {
           imax_profile_id?: string | null
           label?: string
           last_error?: string | null
+          last_login_at?: string | null
+          last_login_method?: string | null
           last_sync_at?: string | null
+          password_ciphertext?: string | null
+          password_iv?: string | null
           proxy_id?: string | null
           region?: string | null
           status?: Database["public"]["Enums"]["account_status"]
           token_ciphertext?: string | null
           token_iv?: string | null
+          uid?: string | null
           updated_at?: string
           user_agent?: string | null
           user_id?: string
