@@ -83,54 +83,53 @@ export function UpdateChecker() {
     return () => clearInterval(id);
   }, []);
 
-  // Auto-download in background when a new release is detected
-  useEffect(() => {
-    if (!release) return;
-    if (!autoDownload) return;
-    if (!isNewer(release.tag_name, APP_VERSION)) return;
-    if (dlStartedForRef.current === release.tag_name) return;
-
-    const asset = pickInstaller(release.assets);
-    if (!asset) return;
-
-    dlStartedForRef.current = release.tag_name;
+  async function startBackgroundDownload(asset: Asset, tag: string) {
+    if (dlStartedForRef.current === tag) {
+      console.log("[UpdateChecker] already downloading", tag);
+      return;
+    }
+    dlStartedForRef.current = tag;
     setDlError(null);
     setDlBlobUrl(null);
     setDlProgress(0);
     setDlFileName(asset.name);
-
-    const controller = new AbortController();
-    (async () => {
-      try {
-        const res = await fetch(asset.browser_download_url, {
-          signal: controller.signal,
-        });
-        if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
-        const total = Number(res.headers.get("content-length")) || asset.size || 0;
-        const reader = res.body.getReader();
-        const chunks: Uint8Array[] = [];
-        let received = 0;
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          if (value) {
-            chunks.push(value);
-            received += value.length;
-            if (total > 0) setDlProgress(Math.round((received / total) * 100));
-          }
+    console.log("[UpdateChecker] start download:", asset.name, asset.browser_download_url);
+    try {
+      const res = await fetch(asset.browser_download_url);
+      console.log("[UpdateChecker] response", res.status);
+      if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+      const total = Number(res.headers.get("content-length")) || asset.size || 0;
+      const reader = res.body.getReader();
+      const chunks: Uint8Array[] = [];
+      let received = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (value) {
+          chunks.push(value);
+          received += value.length;
+          if (total > 0) setDlProgress(Math.round((received / total) * 100));
         }
-        const blob = new Blob(chunks as BlobPart[], {
-          type: "application/octet-stream",
-        });
-        setDlBlobUrl(URL.createObjectURL(blob));
-        setDlProgress(100);
-      } catch (e: unknown) {
-        setDlError(e instanceof Error ? e.message : "Download failed");
-        dlStartedForRef.current = null;
       }
-    })();
+      const blob = new Blob(chunks as BlobPart[], { type: "application/octet-stream" });
+      setDlBlobUrl(URL.createObjectURL(blob));
+      setDlProgress(100);
+      console.log("[UpdateChecker] done");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Download failed";
+      console.error("[UpdateChecker] error:", msg);
+      setDlError(msg);
+      dlStartedForRef.current = null;
+    }
+  }
 
-    return () => controller.abort();
+  useEffect(() => {
+    if (!release || !autoDownload) return;
+    if (!isNewer(release.tag_name, APP_VERSION)) return;
+    const asset = pickInstaller(release.assets);
+    if (!asset) return;
+    startBackgroundDownload(asset, release.tag_name);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [release, autoDownload]);
 
   if (!release) return null;
