@@ -60,6 +60,7 @@ function App() {
           {view === "policy" && <PolicyCheckView />}
         </div>
       </main>
+      <UpdateChecker />
     </div>
   );
 }
