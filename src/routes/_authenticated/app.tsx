@@ -368,13 +368,36 @@ function AccountsView() {
     disconnected: accounts.filter((a: any) => a.status === "disconnected").length,
   }), [accounts]);
 
+  const [showExcel, setShowExcel] = useState(false);
   return (
     <div className="space-y-6">
+      <div className="glass-strong flex flex-wrap items-center justify-between gap-3 rounded-3xl p-4">
+        <div>
+          <h3 className="text-sm font-semibold">📥 Bulk Excel Upload (UID · Password · Cookies)</h3>
+          <p className="text-xs text-muted-foreground">Upload hundreds of accounts at once with auto cookie→UID/PASS fallback login.</p>
+        </div>
+        <button
+          onClick={() => setShowExcel(true)}
+          className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 to-teal-500 px-4 py-2 text-sm font-semibold text-slate-900 hover:opacity-90">
+          <FileSpreadsheet className="h-4 w-4" /> Upload Excel / CSV
+        </button>
+      </div>
+      {showExcel && (
+        <BulkExcelUpload
+          busy={importMut.isPending}
+          onClose={() => setShowExcel(false)}
+          onImport={(rows) => {
+            importMut.mutate(rows, { onSuccess: () => setShowExcel(false) });
+          }}
+        />
+      )}
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <ImportCookies onImport={(rows) => importMut.mutate(rows)} busy={importMut.isPending} />
         <ImportTokens onImport={(rows) => importMut.mutate(rows)} busy={importMut.isPending} />
         <ImportCsv onImport={(rows) => importMut.mutate(rows)} busy={importMut.isPending} />
       </div>
+
+
 
       <div className="glass-strong rounded-3xl p-6">
         <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
