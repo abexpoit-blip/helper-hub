@@ -164,6 +164,9 @@ function AuthPage() {
             </>
           )}
         </div>
+        <div className="mt-6 flex justify-center">
+          <DevCredit />
+        </div>
       </div>
     </div>
   );
