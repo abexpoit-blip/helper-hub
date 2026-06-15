@@ -6,8 +6,9 @@ import {
   LayoutDashboard, Users, Globe, Link2, Wand2, CalendarClock,
   Plus, Search, Zap, TrendingUp, Activity, PlayCircle, Shield, Cpu,
   Sparkles, RefreshCw, Upload, CheckCircle2, AlertTriangle, XCircle,
-  ChevronRight, LogOut, Loader2, Trash2, Wifi, WifiOff,
+  ChevronRight, LogOut, Loader2, Trash2, Wifi, WifiOff, ShieldAlert,
 } from "lucide-react";
+import { PolicyCheckView } from "@/components/PolicyCheckView";
 import { supabase } from "@/integrations/supabase/client";
 import { listAccounts, importAccounts, updateAccountStatus, deleteAccount, mapImaxProfile, attachProxy } from "@/lib/accounts.functions";
 import { listProxies, addProxy, deleteProxy } from "@/lib/proxies.functions";
@@ -21,7 +22,7 @@ export const Route = createFileRoute("/_authenticated/app")({
   component: App,
 });
 
-type ViewKey = "dashboard" | "accounts" | "imax" | "linker" | "reshaper" | "scheduler";
+type ViewKey = "dashboard" | "accounts" | "imax" | "linker" | "reshaper" | "scheduler" | "policy";
 
 const NAV: { key: ViewKey; label: string; icon: typeof LayoutDashboard; tone: string }[] = [
   { key: "dashboard", label: "Dashboard", icon: LayoutDashboard, tone: "from-fuchsia-400 to-violet-500" },
@@ -30,6 +31,7 @@ const NAV: { key: ViewKey; label: string; icon: typeof LayoutDashboard; tone: st
   { key: "linker", label: "Linker Setup", icon: Link2, tone: "from-pink-300 to-fuchsia-500" },
   { key: "reshaper", label: "AI Video Reshaper", icon: Wand2, tone: "from-amber-300 to-rose-500" },
   { key: "scheduler", label: "Campaign Scheduler", icon: CalendarClock, tone: "from-indigo-300 to-purple-500" },
+  { key: "policy", label: "Policy Checker", icon: ShieldAlert, tone: "from-rose-300 to-amber-500" },
 ];
 
 function App() {
@@ -51,6 +53,7 @@ function App() {
           {view === "linker" && <LinkerView />}
           {view === "reshaper" && <ReshaperView />}
           {view === "scheduler" && <SchedulerView />}
+          {view === "policy" && <PolicyCheckView />}
         </div>
       </main>
     </div>
