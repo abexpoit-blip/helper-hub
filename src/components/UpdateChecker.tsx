@@ -185,7 +185,7 @@ export function UpdateChecker() {
         )}
 
         {/* Auto-download toggle */}
-        <label className="mb-3 flex cursor-pointer items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2">
+        <label className="mb-2 flex cursor-pointer items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-2">
           <span className="text-xs text-white/80">Auto-download in background</span>
           <input
             type="checkbox"
@@ -194,6 +194,16 @@ export function UpdateChecker() {
             className="h-4 w-4 accent-fuchsia-500"
           />
         </label>
+
+        {/* Manual background-download trigger */}
+        {!isDownloading && !isReady && installer && (
+          <button
+            onClick={() => startBackgroundDownload(installer, release.tag_name)}
+            className="mb-3 w-full rounded-xl border border-fuchsia-400/30 bg-fuchsia-500/10 px-3 py-1.5 text-[11px] text-fuchsia-200 hover:bg-fuchsia-500/20"
+          >
+            ⚡ Download now in background ({(installer.size / 1024 / 1024).toFixed(1)} MB)
+          </button>
+        )}
 
         {/* Progress */}
         {isDownloading && (
