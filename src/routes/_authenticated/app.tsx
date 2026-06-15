@@ -9,6 +9,7 @@ import {
   ChevronRight, LogOut, Loader2, Trash2, Wifi, WifiOff, ShieldAlert,
 } from "lucide-react";
 import { PolicyCheckView } from "@/components/PolicyCheckView";
+import { ViralReshaperView } from "@/components/ViralReshaperView";
 import { supabase } from "@/integrations/supabase/client";
 import { listAccounts, importAccounts, updateAccountStatus, deleteAccount, mapImaxProfile, attachProxy } from "@/lib/accounts.functions";
 import { listProxies, addProxy, deleteProxy } from "@/lib/proxies.functions";
@@ -51,7 +52,7 @@ function App() {
           {view === "accounts" && <AccountsView />}
           {view === "imax" && <IMaxView />}
           {view === "linker" && <LinkerView />}
-          {view === "reshaper" && <ReshaperView />}
+          {view === "reshaper" && <ViralReshaperView />}
           {view === "scheduler" && <SchedulerView />}
           {view === "policy" && <PolicyCheckView />}
         </div>
