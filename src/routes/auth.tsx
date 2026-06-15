@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Zap, Mail, Lock, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
+import { DevCredit } from "@/components/DevCredit";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
