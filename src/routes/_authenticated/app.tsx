@@ -11,6 +11,7 @@ import {
 import { PolicyCheckView } from "@/components/PolicyCheckView";
 import { ViralReshaperView } from "@/components/ViralReshaperView";
 import { BulkExcelUpload, type ExcelAccountRow } from "@/components/BulkExcelUpload";
+import { DevCredit } from "@/components/DevCredit";
 import { supabase } from "@/integrations/supabase/client";
 import { listAccounts, importAccounts, updateAccountStatus, deleteAccount, mapImaxProfile, attachProxy } from "@/lib/accounts.functions";
 import { listProxies, addProxy, deleteProxy } from "@/lib/proxies.functions";
@@ -105,6 +106,9 @@ function Sidebar({ view, setView }: { view: ViewKey; setView: (v: ViewKey) => vo
           className="glass mt-6 flex w-full items-center gap-2 rounded-2xl px-3 py-2.5 text-xs text-muted-foreground hover:text-foreground">
           <LogOut className="h-3.5 w-3.5" /> Sign out
         </button>
+        <div className="mt-5 flex justify-center">
+          <DevCredit />
+        </div>
       </div>
     </aside>
   );

@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Zap, Mail, Lock, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
+import { DevCredit } from "@/components/DevCredit";
 
 export const Route = createFileRoute("/auth")({
   head: () => ({
@@ -163,6 +164,9 @@ function AuthPage() {
               <button onClick={() => setMode("signin")} className="text-fuchsia-300 hover:underline">Sign in</button>
             </>
           )}
+        </div>
+        <div className="mt-6 flex justify-center">
+          <DevCredit />
         </div>
       </div>
     </div>
